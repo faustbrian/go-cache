@@ -9,8 +9,8 @@ import (
 
 	redisclient "github.com/redis/go-redis/v9"
 
-	cache "github.com/faustbrian/golib/pkg/cache"
-	"github.com/faustbrian/golib/pkg/cache/internal/wire"
+	cache "github.com/faustbrian/go-cache"
+	"github.com/faustbrian/go-cache/internal/wire"
 )
 
 const oversizedReply = "GOCACHE_RECORD_TOO_LARGE"

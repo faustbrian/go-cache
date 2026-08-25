@@ -1,12 +1,13 @@
 # Support
 
-Use GitHub Issues for reproducible bugs and documentation gaps. Use GitHub
-Discussions for design and usage questions when enabled. Security issues must
-follow [SECURITY.md](SECURITY.md).
+Use GitHub issues for reproducible defects, documentation gaps, and bounded
+feature proposals. Include the module path and version, Go version, platform,
+minimal reproduction, expected behavior, actual behavior, and relevant
+non-secret logs.
 
-Include the module version, Go version, backend and server version, minimal
-configuration, expected/actual result state, full classified error chain, and a
-small reproduction. Remove credentials, logical keys, values, and customer data.
+Use GitHub Discussions for adoption questions and design exploration. Use the
+private process in [`SECURITY.md`](SECURITY.md) for vulnerabilities.
 
-Community support is best effort. No response-time, durability, or operational
-support guarantee is provided.
+Support covers released module versions according to
+[`COMPATIBILITY.md`](COMPATIBILITY.md). Unreleased main-branch behavior may
+change while remediation gates are incomplete.

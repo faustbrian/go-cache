@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/golib/pkg/cache"
+	cache "github.com/faustbrian/go-cache"
 )
 
 func FuzzKeySpace(f *testing.F) {

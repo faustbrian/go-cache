@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/golib/pkg/cache"
+	cache "github.com/faustbrian/go-cache"
 )
 
 func TestObserverReceivesLowCardinalityRedactedEvents(t *testing.T) {

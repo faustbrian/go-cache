@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	cache "github.com/faustbrian/golib/pkg/cache"
+	cache "github.com/faustbrian/go-cache"
 )
 
 func TestUnavailableCheckRejectsFlattenedErrors(t *testing.T) {

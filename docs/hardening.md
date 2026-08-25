@@ -190,7 +190,7 @@ go test -race ./... -count=50
 ```
 
 The ownership-guarded publication addition passed
-`make check MODULES=pkg/cache,pkg/lease`, including the real Valkey adapter,
+`make check MODULES=.,pkg/lease`, including the real Valkey adapter,
 exact coverage, race, mutation, API, documentation, interoperability, and
 benchmark gates, on 2026-07-25.
 

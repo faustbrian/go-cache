@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "repository": "github.com/faustbrian/go-cache",
+  "packages": [
+    {
+      "module_directory": ".",
+      "directory": ".",
+      "name": "cache",
+      "import_path": "github.com/faustbrian/go-cache",
+      "kind": "public",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
+    },
+    {
+      "module_directory": ".",
+      "directory": "backend/memory",
+      "name": "memory",
+      "import_path": "github.com/faustbrian/go-cache/backend/memory",
+      "kind": "public",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
+    },
+    {
+      "module_directory": ".",
+      "directory": "backend/redis",
+      "name": "redis",
+      "import_path": "github.com/faustbrian/go-cache/backend/redis",
+      "kind": "public",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
+    },
+    {
+      "module_directory": ".",
+      "directory": "backend/valkey",
+      "name": "valkey",
+      "import_path": "github.com/faustbrian/go-cache/backend/valkey",
+      "kind": "public",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
+    },
+    {
+      "module_directory": ".",
+      "directory": "cacheservice",
+      "name": "cacheservice",
+      "import_path": "github.com/faustbrian/go-cache/cacheservice",
+      "kind": "public",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
+    },
+    {
+      "module_directory": ".",
+      "directory": "cachetest",
+      "name": "cachetest",
+      "import_path": "github.com/faustbrian/go-cache/cachetest",
+      "kind": "test support",
+      "production": false,
+      "executable": true,
+      "coverage_required": false,
+      "build_required": true,
+      "build_tags": []
+    },
+    {
+      "module_directory": ".",
+      "directory": "internal/integrationtest",
+      "name": "integrationtest",
+      "import_path": "github.com/faustbrian/go-cache/internal/integrationtest",
+      "kind": "test support",
+      "production": false,
+      "executable": false,
+      "coverage_required": false,
+      "build_required": true,
+      "build_tags": [
+        "integration"
+      ]
+    },
+    {
+      "module_directory": ".",
+      "directory": "internal/wire",
+      "name": "wire",
+      "import_path": "github.com/faustbrian/go-cache/internal/wire",
+      "kind": "internal",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
+    },
+    {
+      "module_directory": ".",
+      "directory": "observability/otel",
+      "name": "otel",
+      "import_path": "github.com/faustbrian/go-cache/observability/otel",
+      "kind": "public",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
+    },
+    {
+      "module_directory": ".",
+      "directory": "observability/slog",
+      "name": "slog",
+      "import_path": "github.com/faustbrian/go-cache/observability/slog",
+      "kind": "public",
+      "production": true,
+      "executable": true,
+      "coverage_required": true,
+      "build_required": true,
+      "build_tags": []
+    }
+  ]
+}

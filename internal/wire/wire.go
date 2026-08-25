@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	cache "github.com/faustbrian/golib/pkg/cache"
+	cache "github.com/faustbrian/go-cache"
 )
 
 const headerSize = 21

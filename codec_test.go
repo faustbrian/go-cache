@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	cache "github.com/faustbrian/golib/pkg/cache"
+	cache "github.com/faustbrian/go-cache"
 )
 
 type testPayload struct {

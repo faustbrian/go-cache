@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/golib/pkg/cache"
-	"github.com/faustbrian/golib/pkg/cache/internal/wire"
+	cache "github.com/faustbrian/go-cache"
+	"github.com/faustbrian/go-cache/internal/wire"
 )
 
 func TestRecordRoundTripDoesNotAliasPayload(t *testing.T) {

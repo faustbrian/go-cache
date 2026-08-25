@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/golib/pkg/cache"
+	cache "github.com/faustbrian/go-cache"
 )
 
 func TestRecordValidationRejectsAmbiguousDeadlinesAndNegativePayloads(t *testing.T) {

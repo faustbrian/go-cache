@@ -6,8 +6,8 @@ import (
 
 	redisclient "github.com/redis/go-redis/v9"
 
-	cache "github.com/faustbrian/golib/pkg/cache"
-	redisbackend "github.com/faustbrian/golib/pkg/cache/backend/redis"
+	cache "github.com/faustbrian/go-cache"
+	redisbackend "github.com/faustbrian/go-cache/backend/redis"
 )
 
 func TestNewRejectsInvalidConfiguration(t *testing.T) {

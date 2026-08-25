@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	cache "github.com/faustbrian/golib/pkg/cache"
-	"github.com/faustbrian/golib/pkg/cache/internal/wire"
+	cache "github.com/faustbrian/go-cache"
+	"github.com/faustbrian/go-cache/internal/wire"
 )
 
 func FuzzDecode(f *testing.F) {

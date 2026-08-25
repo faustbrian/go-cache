@@ -15,9 +15,9 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	cache "github.com/faustbrian/golib/pkg/cache"
-	redisbackend "github.com/faustbrian/golib/pkg/cache/backend/redis"
-	"github.com/faustbrian/golib/pkg/cache/cachetest"
+	cache "github.com/faustbrian/go-cache"
+	redisbackend "github.com/faustbrian/go-cache/backend/redis"
+	"github.com/faustbrian/go-cache/cachetest"
 )
 
 func TestBackendConformance(t *testing.T) {

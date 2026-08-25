@@ -1,5 +1,15 @@
 # cache
 
+[![CI](https://github.com/faustbrian/go-cache/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/faustbrian/go-cache/actions/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/badge/CodeQL-required-blue)](https://github.com/faustbrian/go-cache/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-100%25_required-blue)](CONTRIBUTING.md#verification)
+[![Mutation](https://img.shields.io/badge/mutation-100%25_required-blue)](CONTRIBUTING.md#verification)
+[![Documentation](https://img.shields.io/badge/docs-checked_in_CI-blue)](docs/)
+[![Go Reference](https://pkg.go.dev/badge/github.com/faustbrian/go-cache.svg)](https://pkg.go.dev/github.com/faustbrian/go-cache)
+[![Release](https://img.shields.io/github/v/release/faustbrian/go-cache?sort=semver)](https://github.com/faustbrian/go-cache/releases)
+[![Go](https://img.shields.io/badge/go-1.26.6-00ADD8?logo=go)](https://go.dev/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 `cache` is a typed Go cache library with explicit hit, miss, stale, decode,
 and backend-failure semantics. It provides bounded cache-aside loading,
 versioned and hashed keys, strict codecs, a bounded memory backend, and native
@@ -13,7 +23,7 @@ contract.
 ## Install
 
 ```sh
-go get github.com/faustbrian/golib/pkg/cache
+go get github.com/faustbrian/go-cache
 ```
 
 Go 1.25 or newer is required.
@@ -28,8 +38,8 @@ import (
 	"fmt"
 	"time"
 
-	cache "github.com/faustbrian/golib/pkg/cache"
-	"github.com/faustbrian/golib/pkg/cache/backend/memory"
+	cache "github.com/faustbrian/go-cache"
+	"github.com/faustbrian/go-cache/backend/memory"
 )
 
 type User struct {
@@ -88,7 +98,7 @@ an error. Backend, decoding, schema, policy, limit, and loader failures remain
 errors and can be classified with `errors.Is`.
 
 For distributed refreshes, acquire a Valkey lease through
-`github.com/faustbrian/golib/pkg/lease/valkey`, derive its opaque guard with
+`github.com/faustbrian/go-lease/valkey`, derive its opaque guard with
 `Store.Guard`, and pass that guard to `Cache.SetIfOwned` or
 `Cache.SetNegativeIfOwned`. The cache record and active owner/token comparison
 occur in one Valkey script. Protected negative publication uses the configured

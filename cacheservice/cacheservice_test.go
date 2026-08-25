@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/faustbrian/golib/pkg/cache/cacheservice"
+	"github.com/faustbrian/go-cache/cacheservice"
 )
 
 type resource struct {

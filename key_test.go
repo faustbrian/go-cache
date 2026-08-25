@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	cache "github.com/faustbrian/golib/pkg/cache"
+	cache "github.com/faustbrian/go-cache"
 )
 
 func TestKeySpaceBuildsDeterministicCollisionSafeKeys(t *testing.T) {

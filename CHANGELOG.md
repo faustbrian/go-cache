@@ -5,6 +5,8 @@ Versioning and keeps an Unreleased section at the top.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-25
+
 ### Documentation
 
 - Replace obsolete standalone-repository links and workflow claims with
@@ -14,6 +16,7 @@ Versioning and keeps an Unreleased section at the top.
 
 ### Changed
 
+- Publish the module from its standalone `github.com/faustbrian/go-cache` identity while preserving its documented API and behavior.
 - Replace obsolete owned-module pseudo-version pins with the monorepo's local
   `v0.0.0` source-proxy coordinates; release tooling continues to emit exact
   `v1.0.0` dependency versions.
@@ -84,4 +87,5 @@ Versioning and keeps an Unreleased section at the top.
 - Keep backend conformance failure messages compatible with standard Go error
   style so strict static analysis remains clean for downstream test suites.
 
-[Unreleased]: https://github.com/faustbrian/golib/commits/main/pkg/cache
+[Unreleased]: https://github.com/faustbrian/go-cache/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/faustbrian/go-cache/releases/tag/v1.0.0

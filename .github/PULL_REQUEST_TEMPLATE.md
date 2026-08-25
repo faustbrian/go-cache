@@ -1,15 +1,21 @@
-## Summary
+## Result
 
-<!-- What changed and why? -->
+Describe the resulting behavior and why it is needed.
 
-## Semantics and compatibility
+## Compatibility And Delivery
 
-<!-- Hit/miss/error, key, TTL, codec, concurrency, adapter, or SemVer impact. -->
+Describe material compatibility, migration, rollout, or risk consequences.
+Omit topics that do not apply.
 
-## Verification
+## Specification Decisions
 
-- [ ] Tests were written for behavior and failures.
-- [ ] `make check` passes.
-- [ ] `make integration` passes when backend behavior changed.
-- [ ] Documentation and `CHANGELOG.md` are updated.
-- [ ] No key, value, credential, or customer data is exposed.
+For parsing, validation, serialization, resolution, canonicalization,
+transport, or protocol changes, list:
+
+- affected decision identifiers;
+- changed normative sources, registries, fixtures, or errata;
+- selected observable behavior and alternatives considered;
+- compatibility and wire consequences;
+- executable conformance and interoperability evidence.
+
+State `Not applicable` only when no specification-backed behavior can change.

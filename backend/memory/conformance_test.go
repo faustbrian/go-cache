@@ -3,7 +3,7 @@ package memory_test
 import (
 	"testing"
 
-	"github.com/faustbrian/golib/pkg/cache/cachetest"
+	"github.com/faustbrian/go-cache/cachetest"
 )
 
 func TestBackendConformance(t *testing.T) {

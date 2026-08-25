@@ -1,0 +1,348 @@
+{
+  "schema_version": 1,
+  "repository": "github.com/faustbrian/go-cache",
+  "go_version": "1.26.6",
+  "modules": [
+    {
+      "directory": ".",
+      "module_path": "github.com/faustbrian/go-cache",
+      "go_version": "1.26.6",
+      "packages": [
+        {
+          "module_directory": ".",
+          "directory": ".",
+          "name": "cache",
+          "import_path": "github.com/faustbrian/go-cache",
+          "kind": "public",
+          "production": true,
+          "executable": true,
+          "coverage_required": true,
+          "build_required": true,
+          "build_tags": []
+        },
+        {
+          "module_directory": ".",
+          "directory": "backend/memory",
+          "name": "memory",
+          "import_path": "github.com/faustbrian/go-cache/backend/memory",
+          "kind": "public",
+          "production": true,
+          "executable": true,
+          "coverage_required": true,
+          "build_required": true,
+          "build_tags": []
+        },
+        {
+          "module_directory": ".",
+          "directory": "backend/redis",
+          "name": "redis",
+          "import_path": "github.com/faustbrian/go-cache/backend/redis",
+          "kind": "public",
+          "production": true,
+          "executable": true,
+          "coverage_required": true,
+          "build_required": true,
+          "build_tags": []
+        },
+        {
+          "module_directory": ".",
+          "directory": "backend/valkey",
+          "name": "valkey",
+          "import_path": "github.com/faustbrian/go-cache/backend/valkey",
+          "kind": "public",
+          "production": true,
+          "executable": true,
+          "coverage_required": true,
+          "build_required": true,
+          "build_tags": []
+        },
+        {
+          "module_directory": ".",
+          "directory": "cacheservice",
+          "name": "cacheservice",
+          "import_path": "github.com/faustbrian/go-cache/cacheservice",
+          "kind": "public",
+          "production": true,
+          "executable": true,
+          "coverage_required": true,
+          "build_required": true,
+          "build_tags": []
+        },
+        {
+          "module_directory": ".",
+          "directory": "cachetest",
+          "name": "cachetest",
+          "import_path": "github.com/faustbrian/go-cache/cachetest",
+          "kind": "test support",
+          "production": false,
+          "executable": true,
+          "coverage_required": false,
+          "build_required": true,
+          "build_tags": []
+        },
+        {
+          "module_directory": ".",
+          "directory": "internal/integrationtest",
+          "name": "integrationtest",
+          "import_path": "github.com/faustbrian/go-cache/internal/integrationtest",
+          "kind": "test support",
+          "production": false,
+          "executable": false,
+          "coverage_required": false,
+          "build_required": true,
+          "build_tags": [
+            "integration"
+          ]
+        },
+        {
+          "module_directory": ".",
+          "directory": "internal/wire",
+          "name": "wire",
+          "import_path": "github.com/faustbrian/go-cache/internal/wire",
+          "kind": "internal",
+          "production": true,
+          "executable": true,
+          "coverage_required": true,
+          "build_required": true,
+          "build_tags": []
+        },
+        {
+          "module_directory": ".",
+          "directory": "observability/otel",
+          "name": "otel",
+          "import_path": "github.com/faustbrian/go-cache/observability/otel",
+          "kind": "public",
+          "production": true,
+          "executable": true,
+          "coverage_required": true,
+          "build_required": true,
+          "build_tags": []
+        },
+        {
+          "module_directory": ".",
+          "directory": "observability/slog",
+          "name": "slog",
+          "import_path": "github.com/faustbrian/go-cache/observability/slog",
+          "kind": "public",
+          "production": true,
+          "executable": true,
+          "coverage_required": true,
+          "build_required": true,
+          "build_tags": []
+        }
+      ],
+      "purpose": "`cache` is a typed Go cache library with explicit hit, miss, stale, decode, and backend-failure semantics. It provides bounded cache-aside loading, versioned and hashed keys, strict codecs, a bounded memory backend, and native Redis and Valkey adapters. Valkey-backed caches can also publish a refresh only while a compatible distributed lease is still owned.",
+      "lifecycle": "stable",
+      "kind": "public library",
+      "releasable": true,
+      "family": "persistence-and-durability",
+      "family_label": "Persistence And Durability",
+      "family_description": "Durable state, delivery, coordination, recovery, and operational lifecycle.",
+      "family_order": 4,
+      "version": "v1.0.0",
+      "tag_prefix": "v",
+      "owned_dependencies": [
+        "github.com/faustbrian/go-cli",
+        "github.com/faustbrian/go-correlation",
+        "github.com/faustbrian/go-identifier",
+        "github.com/faustbrian/go-service"
+      ],
+      "reverse_owned_dependencies": [
+        "github.com/faustbrian/go-authorization",
+        "github.com/faustbrian/go-service/integration/adoption"
+      ],
+      "external_runtime_dependencies": [
+        "github.com/moby/moby/client",
+        "github.com/redis/go-redis/v9",
+        "github.com/testcontainers/testcontainers-go",
+        "github.com/valkey-io/valkey-go",
+        "github.com/valkey-io/valkey-go/mock",
+        "go.opentelemetry.io/otel",
+        "go.opentelemetry.io/otel/metric",
+        "go.opentelemetry.io/otel/sdk/metric",
+        "go.uber.org/goleak",
+        "go.uber.org/mock"
+      ],
+      "required_services": [
+        "redis",
+        "valkey"
+      ],
+      "build_tags": [
+        "integration"
+      ],
+      "test_tags": [
+        "integration"
+      ],
+      "interoperability_tools": [],
+      "specifications": [],
+      "conformance_corpora": [],
+      "provenance": [],
+      "goal_files": [
+        ".ai/GOAL.md",
+        ".ai/GOAL_HARDEN.md",
+        ".ai/GOAL_RESILIENCE.md",
+        ".ai/GOAL_RESILIENCE_HARDEN.md"
+      ],
+      "goal_status": "implementation-evidence-inventoried",
+      "goal_evidence": [
+        {
+          "file": ".ai/GOAL.md",
+          "requirements_sha256": "907a568828c3d89ad876b534d40f97cb8fd331b63035bb096d104386b56f2cfc",
+          "implementation_evidence": [
+            "CHANGELOG.md",
+            "README.md",
+            "docs/api.md",
+            "docs/compatibility.md",
+            "docs/hardening.md",
+            "docs/performance.md"
+          ],
+          "verification_gates": [
+            "format-check",
+            "tidy-check",
+            "safety",
+            "vet",
+            "test",
+            "race",
+            "coverage",
+            "lint",
+            "staticcheck",
+            "vulnerability",
+            "secrets",
+            "licenses",
+            "sbom",
+            "fuzz",
+            "mutation",
+            "nilaway",
+            "docs",
+            "api",
+            "conformance",
+            "interoperability",
+            "benchmark"
+          ],
+          "implementation_status": "implemented-requires-fresh-verification"
+        },
+        {
+          "file": ".ai/GOAL_HARDEN.md",
+          "requirements_sha256": "8b416f5b9532a8ad52d5f1fb6e45811ed92a41d684e07f102fd7cc452dba93e4",
+          "implementation_evidence": [
+            "CHANGELOG.md",
+            "README.md",
+            "docs/api.md",
+            "docs/compatibility.md",
+            "docs/hardening.md",
+            "docs/performance.md"
+          ],
+          "verification_gates": [
+            "format-check",
+            "tidy-check",
+            "safety",
+            "vet",
+            "test",
+            "race",
+            "coverage",
+            "lint",
+            "staticcheck",
+            "vulnerability",
+            "secrets",
+            "licenses",
+            "sbom",
+            "fuzz",
+            "mutation",
+            "nilaway",
+            "docs",
+            "api",
+            "conformance",
+            "interoperability",
+            "benchmark"
+          ],
+          "implementation_status": "implemented-requires-fresh-verification"
+        },
+        {
+          "file": ".ai/GOAL_RESILIENCE.md",
+          "requirements_sha256": "2fa943c624ff6293ee2e9b55e23e2e502805fb7dc3535662f36a371098eb7ee9",
+          "implementation_evidence": [
+            "CHANGELOG.md",
+            "README.md",
+            "docs/api.md",
+            "docs/compatibility.md",
+            "docs/hardening.md",
+            "docs/performance.md"
+          ],
+          "verification_gates": [
+            "format-check",
+            "tidy-check",
+            "safety",
+            "vet",
+            "test",
+            "race",
+            "coverage",
+            "lint",
+            "staticcheck",
+            "vulnerability",
+            "secrets",
+            "licenses",
+            "sbom",
+            "fuzz",
+            "mutation",
+            "nilaway",
+            "docs",
+            "api",
+            "conformance",
+            "interoperability",
+            "benchmark"
+          ],
+          "implementation_status": "implemented-requires-fresh-verification"
+        },
+        {
+          "file": ".ai/GOAL_RESILIENCE_HARDEN.md",
+          "requirements_sha256": "0f8e8e0dcaf76ec255c8053448ffde12fceb6cbcc0fae3af23b4ccbb4598527a",
+          "implementation_evidence": [
+            "CHANGELOG.md",
+            "README.md",
+            "docs/api.md",
+            "docs/compatibility.md",
+            "docs/hardening.md",
+            "docs/performance.md"
+          ],
+          "verification_gates": [
+            "format-check",
+            "tidy-check",
+            "safety",
+            "vet",
+            "test",
+            "race",
+            "coverage",
+            "lint",
+            "staticcheck",
+            "vulnerability",
+            "secrets",
+            "licenses",
+            "sbom",
+            "fuzz",
+            "mutation",
+            "nilaway",
+            "docs",
+            "api",
+            "conformance",
+            "interoperability",
+            "benchmark"
+          ],
+          "implementation_status": "implemented-requires-fresh-verification"
+        }
+      ],
+      "gates": {
+        "api_compatibility": true,
+        "benchmarks": true,
+        "conformance": false,
+        "coverage": true,
+        "documentation": true,
+        "fuzz": true,
+        "lint": true,
+        "mutation": true,
+        "race": true,
+        "security": true,
+        "tests": true
+      }
+    }
+  ]
+}

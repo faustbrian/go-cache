@@ -11,9 +11,9 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 	valkeyclient "github.com/valkey-io/valkey-go"
 
-	cache "github.com/faustbrian/golib/pkg/cache"
-	valkeybackend "github.com/faustbrian/golib/pkg/cache/backend/valkey"
-	"github.com/faustbrian/golib/pkg/cache/internal/integrationtest"
+	cache "github.com/faustbrian/go-cache"
+	valkeybackend "github.com/faustbrian/go-cache/backend/valkey"
+	"github.com/faustbrian/go-cache/internal/integrationtest"
 )
 
 const valkeyTestPassword = "integration-only-password"
