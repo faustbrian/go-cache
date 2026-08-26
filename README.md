@@ -140,7 +140,7 @@ later-declared components, and preserves startup and partial-cleanup failures.
 ## Documentation
 
 - [API reference](docs/api.md)
-- [Semantic matrices and hardening audit](docs/hardening.md)
+- [Behavior and failure modes](docs/failure-modes.md)
 - [Operations guide](docs/operations.md)
 - [Key design and invalidation](docs/keys-and-invalidation.md)
 - [Codecs and schema evolution](docs/codecs.md)
@@ -172,8 +172,3 @@ versions may change APIs. See [CHANGELOG.md](CHANGELOG.md) and the
 ## License
 
 MIT. See [LICENSE](LICENSE).
-
-## Ecosystem
-
-Use the [Golib documentation portal](https://github.com/faustbrian/golib/blob/main/docs/index.md)
-to choose companion packages, supported stacks, recipes, and operations guidance.

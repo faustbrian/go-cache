@@ -5,6 +5,11 @@ Versioning and keeps an Unreleased section at the top.
 
 ## [Unreleased]
 
+### Documentation
+
+- Remove the dated release audit and replace the archived monorepo link with
+  package-owned documentation.
+
 ## [1.0.0] - 2026-08-25
 
 ### Changed
