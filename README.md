@@ -139,41 +139,12 @@ later-declared components, and preserves startup and partial-cleanup failures.
 
 ## Documentation
 
-- [API reference](docs/api.md)
-- [Semantic matrices and hardening audit](docs/hardening.md)
-- [Operations guide](docs/operations.md)
-- [Key design and invalidation](docs/keys-and-invalidation.md)
-- [Codecs and schema evolution](docs/codecs.md)
-- [Stampede control and concurrency](docs/concurrency.md)
-- [Adoption examples](docs/examples.md)
-- [FAQ](docs/faq.md) and [troubleshooting](docs/troubleshooting.md)
-- [Security](SECURITY.md), [compatibility](docs/compatibility.md),
-  [migration](docs/migration.md), and [performance](docs/performance.md)
+Use the [documentation index](docs/README.md) for behavior, backends,
+operations, adoption, compatibility, and security guidance.
 
-## Development
-
-```sh
-make check
-make integration
-make fuzz
-make benchmark
-```
-
-`make check` enforces formatting, vet, lint, unit tests, meaningful exact
-coverage, race safety, vulnerability scanning, GO-SAFETY-1, and docs
-compilation. Integration tests use Testcontainers and require Docker.
-
-## Status
-
-The public API is being prepared for `v1.0.0`. Until that release, minor
-versions may change APIs. See [CHANGELOG.md](CHANGELOG.md) and the
-[compatibility policy](docs/compatibility.md).
+Development and verification guidance is in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
 MIT. See [LICENSE](LICENSE).
-
-## Ecosystem
-
-Use the [Golib documentation portal](https://github.com/faustbrian/golib/blob/main/docs/index.md)
-to choose companion packages, supported stacks, recipes, and operations guidance.

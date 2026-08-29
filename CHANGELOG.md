@@ -5,6 +5,16 @@ Versioning and keeps an Unreleased section at the top.
 
 ## [Unreleased]
 
+### Changed
+
+- Replace copied repository tooling with the pinned `go-library-tools` v1.0.4
+  contract while retaining package-owned policy and verification evidence.
+
+### Documentation
+
+- Remove the dated release audit and replace the archived monorepo link with
+  package-owned documentation.
+
 ## [1.0.0] - 2026-08-25
 
 ### Changed
@@ -33,7 +43,7 @@ Versioning and keeps an Unreleased section at the top.
 - Replace obsolete standalone-repository links and workflow claims with
   monorepo-canonical targets and current release guidance.
 
-- Link the package README to the repository-wide Golib documentation portal.
+- Link the package README to package-owned documentation.
 
 ### Changed
 

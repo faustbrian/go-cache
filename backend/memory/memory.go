@@ -130,6 +130,10 @@ func (b *Backend) Set(
 	evicted := 0
 	for len(b.items) >= b.maxEntries || b.bytes+size > b.maxBytes {
 		oldest := b.lru.Back()
+		if oldest == nil {
+			b.mu.Unlock()
+			return false, cache.ErrCapacity
+		}
 		b.remove(oldest)
 		b.evictions++
 		evicted++

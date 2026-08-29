@@ -344,8 +344,13 @@ func TestSetNegativeIfOwnedSupersedesActiveLocalLoad(t *testing.T) {
 		t.Fatalf("SetNegativeIfOwned() error = %v", err)
 	}
 	close(release)
-	if err := <-loaded; err != nil {
-		t.Fatalf("GetOrLoad() error = %v", err)
+	select {
+	case loadErr := <-loaded:
+		if loadErr != nil {
+			t.Fatalf("GetOrLoad() error = %v", loadErr)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("GetOrLoad() did not finish after SetNegativeIfOwned released the active-flight lock")
 	}
 	result, err := store.Get(t.Context(), "catalog")
 	if err != nil || result.State != cache.Miss || !result.Negative {
