@@ -131,7 +131,8 @@ func (b *Backend) Set(
 	for len(b.items) >= b.maxEntries || b.bytes+size > b.maxBytes {
 		oldest := b.lru.Back()
 		if oldest == nil {
-			break
+			b.mu.Unlock()
+			return false, cache.ErrCapacity
 		}
 		b.remove(oldest)
 		b.evictions++
