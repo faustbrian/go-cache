@@ -5,6 +5,11 @@ Versioning and keeps an Unreleased section at the top.
 
 ## [Unreleased]
 
+### Changed
+
+- Replace copied repository tooling with the pinned `go-library-tools` v1.0.4
+  contract while retaining package-owned policy and verification evidence.
+
 ### Documentation
 
 - Remove the dated release audit and replace the archived monorepo link with

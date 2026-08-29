@@ -32,6 +32,11 @@ that hide a failing package.
 
 ## Verification
 
+The repository contract is pinned in [`.golib.yaml`](.golib.yaml). The root
+Makefile is intentionally a thin local wrapper around the released `golib`
+CLI; package-specific checks belong in typed configuration operations or
+`verification/package.mk`, not copied `.golib` tooling.
+
 Run during development:
 
 ```bash
