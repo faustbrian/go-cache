@@ -20,13 +20,19 @@ The semantic API does not expose Redis or Valkey client types. Backends keep
 their native clients and atomic behavior while applications share one portable
 contract.
 
+The module is a stable member of Golib's Persistence and durability family.
+For ecosystem-wide selection and ownership guidance, see the versioned
+[Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/README.md)
+and its
+[Persistence and durability family](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/design-language.md#package-families-and-selection).
+
 ## Install
 
 ```sh
 go get github.com/faustbrian/go-cache
 ```
 
-Go 1.25 or newer is required.
+Go 1.26.6 or newer is required.
 
 ## Quickstart
 
@@ -123,6 +129,13 @@ See [policy decisions](docs/decisions.md) and
 - [Bounded memory, Redis, and Valkey setup](docs/backends.md)
 - [OpenTelemetry and slog](docs/observability.md)
 - [Shared backend conformance suite](docs/api.md#backend-conformance)
+
+Use the root package for portable cache policy and result semantics. Select a
+backend package only for its named storage target, `cachetest` only for backend
+conformance tests, and an observability package only when the corresponding
+integration is required. Do not use this module as durable authoritative
+storage, a distributed-lock implementation, or an application-wide retry
+owner.
 
 ## Service lifecycle
 

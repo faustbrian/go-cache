@@ -1,7 +1,7 @@
 # Compatibility and SemVer policy
 
-The module requires Go 1.25 or newer. CI tests the minimum supported Go 1.25
-line and the current stable Go release.
+The module requires Go 1.26.6 or newer. CI tests the supported Go 1.26.6
+toolchain.
 
 Before `v1.0.0`, minor releases may change public APIs with changelog and
 migration notes. Starting with `v1`, SemVer applies to:
