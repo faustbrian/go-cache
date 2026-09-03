@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "repository": "github.com/faustbrian/go-cache",
   "go_version": "1.26.6",
   "modules": [
@@ -180,6 +180,104 @@
       "goal_files": [],
       "goal_status": "not-applicable",
       "goal_evidence": [],
+      "cohesion": {
+        "family": "persistence-and-durability",
+        "secondary_capabilities": [
+          "database-and-storage",
+          "distributed-coordination",
+          "observability",
+          "testing-and-conformance"
+        ],
+        "responsibility": "Provide typed cache semantics, bounded cache-aside loading, explicit key and codec policy, and backend-neutral ownership contracts.",
+        "non_goals": [
+          "Own native backend clients, distributed locking, durable business state, or application-wide retry policy."
+        ],
+        "public_package_identifier": "cache",
+        "primary_entry_packages": [
+          "github.com/faustbrian/go-cache"
+        ],
+        "package_selection": {
+          "github.com/faustbrian/go-cache": "Use for typed hit, miss, stale, decode, and backend-failure semantics with bounded cache-aside loading.",
+          "github.com/faustbrian/go-cache/backend/memory": "Use for a bounded process-local backend with explicit entry and byte limits.",
+          "github.com/faustbrian/go-cache/backend/redis": "Use to adapt a caller-owned go-redis client to the cache backend contract.",
+          "github.com/faustbrian/go-cache/backend/valkey": "Use to adapt a caller-owned valkey-go client, including lease-guarded publication.",
+          "github.com/faustbrian/go-cache/cacheservice": "Use to compose explicit cache readiness and optional transferred shutdown with go-service.",
+          "github.com/faustbrian/go-cache/cachetest": "Use to verify custom backends against the shared cache conformance contract.",
+          "github.com/faustbrian/go-cache/observability/otel": "Use for bounded OpenTelemetry cache observations with a caller-owned meter.",
+          "github.com/faustbrian/go-cache/observability/slog": "Use for bounded structured cache observations with a caller-owned slog logger."
+        },
+        "lifecycle_status": "active",
+        "maturity": "stable",
+        "construction_styles": [
+          "new-config",
+          "new-options",
+          "plain-function",
+          "validated-value"
+        ],
+        "lifecycle_styles": [
+          "close",
+          "shutdown",
+          "stateless"
+        ],
+        "ownership": {
+          "configuration": "caller",
+          "mutable_inputs": [
+            "borrow",
+            "copy",
+            "transfer"
+          ],
+          "runtime_resources": "shared",
+          "background_work": "package"
+        },
+        "optional_owned_dependencies": [
+          "github.com/faustbrian/go-lease/valkey"
+        ],
+        "adapters": [
+          "github.com/faustbrian/go-cache/backend/memory",
+          "github.com/faustbrian/go-cache/backend/redis",
+          "github.com/faustbrian/go-cache/backend/valkey",
+          "github.com/faustbrian/go-cache/cacheservice",
+          "github.com/faustbrian/go-cache/observability/otel",
+          "github.com/faustbrian/go-cache/observability/slog"
+        ],
+        "companions": [
+          "github.com/faustbrian/go-cache/cachetest"
+        ],
+        "supported_go": {
+          "minimum": "1.26.6",
+          "tested": [
+            "1.26.6"
+          ]
+        },
+        "supported_platforms": [
+          "portable-go"
+        ],
+        "supported_backends": [
+          "memory",
+          "redis",
+          "valkey"
+        ],
+        "supported_protocols": [],
+        "documentation": {
+          "readme": "README.md",
+          "api": "docs/api.md",
+          "adoption": "docs/README.md",
+          "security": "SECURITY.md",
+          "compatibility": "docs/compatibility.md",
+          "performance": "docs/performance.md",
+          "examples": "docs/examples.md",
+          "faq": "docs/faq.md",
+          "changelog": "CHANGELOG.md",
+          "pkg_go_dev": "https://pkg.go.dev/github.com/faustbrian/go-cache",
+          "ecosystem_index": "https://github.com/faustbrian/go-library-tools/blob/v1.3.0/docs/ecosystem/README.md"
+        },
+        "known_good_compatibility_sets": [],
+        "delivery": {
+          "implementation": "not-started",
+          "hardening": "not-started",
+          "release": "not-started"
+        }
+      },
       "gates": {
         "api_compatibility": true,
         "benchmarks": true,

@@ -7,10 +7,20 @@ Versioning and keeps an Unreleased section at the top.
 
 ### Changed
 
+- Adopt the `go-library-tools` v1.3.0 schema-v2 cohesion contract and local
+  `make cohesion` gate without changing cache runtime behavior.
+- Pin reusable CI to the v1.3.0 workflow and enforce cohesion metadata in the
+  repository's required CI contract.
+
 - Replace copied repository tooling with the pinned `go-library-tools` v1.0.13
   contract while retaining package-owned policy and verification evidence.
 
 ### Documentation
+
+- Publish the cache family's ownership, package-selection, lifecycle, backend,
+  and supported-environment metadata, and link the README to the immutable
+  v1.3.0 ecosystem index and family guidance.
+- Align the documented minimum Go toolchain with the module manifest.
 
 - Remove the dated release audit and replace the archived monorepo link with
   package-owned documentation.
