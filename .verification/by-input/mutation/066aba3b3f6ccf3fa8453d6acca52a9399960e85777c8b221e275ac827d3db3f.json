@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "repository": "github.com/faustbrian/go-cache",
+  "module": ".",
+  "package": "adapters/slog",
+  "gate": "mutation",
+  "input_digest": "sha256:066aba3b3f6ccf3fa8453d6acca52a9399960e85777c8b221e275ac827d3db3f",
+  "verifier_digest": "sha256:9a9499ff68a8dfd49a0be7995590297a8ee563a1aa226bfd8b9361dc53058108",
+  "result": "passed",
+  "report_digest": "sha256:9db21ceac5f0c616af5cb6bcd6d6a59b9a8b7f176d64f15d4f1fa1267a7cd6af",
+  "environment": {
+    "CGO_ENABLED": "1",
+    "GOARCH": "arm64",
+    "GOOS": "darwin",
+    "GOVERSION": "go1.27.0",
+    "gremlins_binary_sha256": "sha256:6a2beddc477eb410f8a670b6c9049558563d3c4327498fe31604d31c773a959e"
+  },
+  "completed_at": "2026-09-09T04:50:58.414039Z"
+}

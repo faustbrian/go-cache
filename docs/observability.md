@@ -14,9 +14,11 @@ The OTel adapter records:
 
 Only enumerated operation and outcome labels are accepted. Instrument creation
 errors are returned from the constructor.
+Import the adapter as `github.com/faustbrian/go-cache/adapters/otel`.
 
 The slog adapter records the same bounded fields. Configure its logger and
 level explicitly. It never logs keys, values, or causes.
+Import the adapter as `github.com/faustbrian/go-cache/adapters/slog`.
 
 Observer failures and panics are best-effort and cannot alter cache behavior.
 Monitor exporter health separately. Alert on backend and loader error outcomes,

@@ -12,12 +12,14 @@ There is no janitor goroutine or timer. `MaxBytes` excludes Go runtime, map, and
 list overhead, so production limits need headroom.
 
 ```go
-backend, err := memory.New(memory.Config{
+backend, err := cachememory.New(cachememory.Config{
 	MaxEntries: 50_000,
 	MaxBytes:   128 << 20,
 	Clock:      cache.SystemClock{},
 })
 ```
+
+Import this adapter as `github.com/faustbrian/go-cache/adapters/memory`.
 
 It is process-local and makes no durability or cross-process consistency claim.
 
@@ -28,10 +30,12 @@ authentication, pooling, retries, and timeouts.
 
 ```go
 client := redis.NewClient(&redis.Options{Addr: "redis:6379"})
-backend, err := redisbackend.New(redisbackend.Config{
+backend, err := cacheredis.New(cacheredis.Config{
 	Client: client, Clock: cache.SystemClock{}, MaxRecordSize: 1 << 20,
 })
 ```
+
+Import this adapter as `github.com/faustbrian/go-cache/adapters/redis`.
 
 The adapter bounds reads server-side before retrieving bytes, stores one
 versioned record envelope, applies `NX`/`XX` atomically, and sets server expiry
@@ -47,10 +51,12 @@ pool options.
 
 ```go
 client, err := valkey.NewClient(valkey.ClientOption{InitAddress: []string{"valkey:6379"}})
-backend, err := valkeybackend.New(valkeybackend.Config{
+backend, err := cachevalkey.New(cachevalkey.Config{
 	Client: client, Clock: cache.SystemClock{}, MaxRecordSize: 1 << 20,
 })
 ```
+
+Import this adapter as `github.com/faustbrian/go-cache/adapters/valkey`.
 
 The Valkey adapter uses valkey-go's command builder and binary-safe values. Its
 wire and conditional semantics match the Redis adapter, including the relative

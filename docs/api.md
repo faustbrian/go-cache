@@ -134,8 +134,9 @@ backends are not required to provide distributed ownership.
 
 ## Service lifecycle adapter
 
-`cacheservice.New[R]` retains the exact concrete cache or Valkey resource while
-adapting explicit startup, readiness, and shutdown callbacks to `service`.
+`adapters/service.New[R]` retains the exact concrete cache or Valkey resource
+while adapting explicit startup, readiness, and shutdown callbacks to
+`service`.
 Readiness is opt-in and re-evaluates the resource on every probe, allowing
 recovery after transient failures.
 

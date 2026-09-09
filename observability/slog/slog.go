@@ -2,10 +2,10 @@ package slog
 
 import (
 	"context"
-	"fmt"
 	logslog "log/slog"
 
 	cache "github.com/faustbrian/go-cache"
+	cacheslog "github.com/faustbrian/go-cache/adapters/slog"
 )
 
 // Config selects the logger and level used by an Observer.
@@ -15,35 +15,20 @@ type Config struct {
 	IncludeSize bool
 }
 
-// Observer writes redacted semantic cache events through slog.
-type Observer struct {
-	logger      *logslog.Logger
-	level       logslog.Level
-	includeSize bool
-}
+// Observer preserves the legacy slog adapter type identity.
+type Observer struct{ inner *cacheslog.Observer }
 
 // New validates config and constructs a logging observer.
 func New(config Config) (*Observer, error) {
-	if config.Logger == nil {
-		return nil, fmt.Errorf("slog observer requires a logger")
+	inner, err := cacheslog.New(cacheslog.Config(config))
+	if err != nil {
+		return nil, err
 	}
-	return &Observer{
-		logger:      config.Logger,
-		level:       config.Level,
-		includeSize: config.IncludeSize,
-	}, nil
+
+	return &Observer{inner: inner}, nil
 }
 
 // Observe logs one event without key or value data.
-func (o *Observer) Observe(ctx context.Context, event cache.Event) error {
-	attributes := []logslog.Attr{
-		logslog.String("operation", string(event.Operation)),
-		logslog.String("outcome", string(event.Outcome)),
-		logslog.Float64("duration_ms", float64(event.Duration.Microseconds())/1000),
-	}
-	if o.includeSize {
-		attributes = append(attributes, logslog.Int("size_bytes", event.Size))
-	}
-	o.logger.LogAttrs(ctx, o.level, "cache operation", attributes...)
-	return nil
+func (observer *Observer) Observe(ctx context.Context, event cache.Event) error {
+	return observer.inner.Observe(ctx, event)
 }

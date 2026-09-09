@@ -19,6 +19,27 @@ Replace unbounded `singleflight.Group` use with `GetOrLoad`. Set measured
 `MaxConcurrent` and `MaxWaitersPerKey` values, make loaders honor their supplied
 context, and call `Close` during shutdown.
 
+## To canonical adapter paths
+
+New integrations use the canonical `adapters/*` paths. Existing integrations
+can migrate imports independently; configuration, exported method behavior,
+error classification, resource ownership, lifecycle order, redaction, and
+backend wire semantics are unchanged.
+
+| Deprecated path | Canonical replacement |
+| --- | --- |
+| `backend/memory` | `adapters/memory` |
+| `backend/redis` | `adapters/redis` |
+| `backend/valkey` | `adapters/valkey` |
+| `cacheservice` | `adapters/service` |
+| `observability/otel` | `adapters/otel` |
+| `observability/slog` | `adapters/slog` |
+
+The deprecated packages retain their own named Go type identities and delegate
+to the canonical implementations. They remain supported for the longer of 180
+days after the canonical successor release and two subsequently published
+stable root-module minor releases.
+
 ## Release upgrades
 
 Read every version in `CHANGELOG.md`. For changes to keys, codecs, TTLs, error
