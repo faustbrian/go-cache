@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "repository": "github.com/faustbrian/go-cache",
+  "module": ".",
+  "package": "cacheservice",
+  "gate": "mutation",
+  "input_digest": "sha256:a1f6fd0f47ebb70c7f37c86c3624aa85441274abaf0d8b72c2f0f8db1f489198",
+  "verifier_digest": "sha256:9a9499ff68a8dfd49a0be7995590297a8ee563a1aa226bfd8b9361dc53058108",
+  "result": "passed",
+  "report_digest": "sha256:8addefd718b29e53ffdf77abe9a96e84286b279c94d3805ebe87e8dbf6f2e88a",
+  "environment": {
+    "CGO_ENABLED": "1",
+    "GOARCH": "arm64",
+    "GOOS": "darwin",
+    "GOVERSION": "go1.27.0",
+    "gremlins_binary_sha256": "sha256:6a2beddc477eb410f8a670b6c9049558563d3c4327498fe31604d31c773a959e"
+  },
+  "completed_at": "2026-09-09T05:01:16.571321Z"
+}

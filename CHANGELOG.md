@@ -5,6 +5,19 @@ Versioning and keeps an Unreleased section at the top.
 
 ## [Unreleased]
 
+### Added
+
+- Add canonical memory, Redis, Valkey, service-lifecycle, OpenTelemetry, and
+  slog integrations under `adapters/*` without changing their runtime
+  contracts.
+
+### Deprecated
+
+- Deprecate the `backend/*`, `cacheservice`, and `observability/*` integration
+  paths in favor of their `adapters/*` successors. Compatibility facades keep
+  existing source, named type, error, ownership, lifecycle, redaction, and
+  backend behavior during the documented migration interval.
+
 ### Changed
 
 - Adopt the checksum-verified `go-library-tools` v1.4.0 CLI, schema-v2

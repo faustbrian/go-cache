@@ -45,7 +45,7 @@ import (
 	"time"
 
 	cache "github.com/faustbrian/go-cache"
-	"github.com/faustbrian/go-cache/backend/memory"
+	cachememory "github.com/faustbrian/go-cache/adapters/memory"
 )
 
 type User struct {
@@ -55,7 +55,7 @@ type User struct {
 
 func main() {
 	ctx := context.Background()
-	backend, err := memory.New(memory.Config{
+	backend, err := cachememory.New(cachememory.Config{
 		MaxEntries: 10_000,
 		MaxBytes:   64 << 20,
 		Clock:      cache.SystemClock{},
@@ -131,24 +131,29 @@ See [policy decisions](docs/decisions.md) and
 - [Shared backend conformance suite](docs/api.md#backend-conformance)
 
 Use the root package for portable cache policy and result semantics. Select a
-backend package only for its named storage target, `cachetest` only for backend
-conformance tests, and an observability package only when the corresponding
-integration is required. Do not use this module as durable authoritative
-storage, a distributed-lock implementation, or an application-wide retry
-owner.
+package under `adapters/` only for its named integration, `cachetest` only for
+backend conformance tests, and an observability adapter only when the
+corresponding integration is required. Do not use this module as durable
+authoritative storage, a distributed-lock implementation, or an
+application-wide retry owner.
 
 ## Service lifecycle
 
-`cacheservice.New` adapts an explicit concrete cache, Redis, or Valkey resource
-to `service.Component`. Startup validation and readiness are opt-in callbacks
-that receive the service context and the concrete resource. Callers add the
-readiness check to `service.Plan` only when cache availability is required to
-accept new work.
+`adapters/service.New` adapts an explicit concrete cache, Redis, or Valkey
+resource to `service.Component`. Startup validation and readiness are opt-in
+callbacks that receive the service context and the concrete resource. Callers
+add the readiness check to `service.Plan` only when cache availability is
+required to accept new work.
 
 Omitting `Shutdown` keeps the resource shared and guarantees the adapter never
 closes it. Providing `Shutdown` explicitly transfers close ownership. The
 adapter performs no retries, closes a transferred resource once after draining
 later-declared components, and preserves startup and partial-cleanup failures.
+
+The former `backend/*`, `cacheservice`, and `observability/*` import paths are
+deprecated compatibility facades. New code should use the corresponding
+`adapters/*` package; existing callers can migrate imports without changing
+configuration or runtime semantics.
 
 ## Documentation
 

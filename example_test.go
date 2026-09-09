@@ -6,11 +6,11 @@ import (
 	"time"
 
 	cache "github.com/faustbrian/go-cache"
-	"github.com/faustbrian/go-cache/backend/memory"
+	cachememory "github.com/faustbrian/go-cache/adapters/memory"
 )
 
 func ExampleCache_GetOrLoad() {
-	backend, _ := memory.New(memory.Config{
+	backend, _ := cachememory.New(cachememory.Config{
 		MaxEntries: 100,
 		MaxBytes:   1 << 20,
 		Clock:      cache.SystemClock{},
