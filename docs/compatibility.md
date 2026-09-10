@@ -1,6 +1,6 @@
 # Compatibility and SemVer policy
 
-The module requires Go 1.26.6 or newer. CI tests the supported Go 1.26.6
+The module requires Go 1.27.0 or newer. CI tests the supported Go 1.27.0
 toolchain.
 
 Before `v1.0.0`, minor releases may change public APIs with changelog and
