@@ -7,8 +7,8 @@ require (
 	github.com/moby/moby/client v0.4.0
 	github.com/redis/go-redis/v9 v9.21.0
 	github.com/testcontainers/testcontainers-go v0.43.0
-	github.com/valkey-io/valkey-go v1.0.76
-	github.com/valkey-io/valkey-go/mock v1.0.76
+	github.com/valkey-io/valkey-go v1.0.77
+	github.com/valkey-io/valkey-go/mock v1.0.77
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/metric v1.44.0
 	go.opentelemetry.io/otel/sdk/metric v1.44.0
