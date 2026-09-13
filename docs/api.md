@@ -11,7 +11,8 @@ defaults. Negative limits, contradictory stale policies, and jitter at or above
 the positive TTL are rejected.
 
 Construction errors match `ErrInvalidConfig`, `ErrInvalidTTL`, or
-`ErrInvalidPolicy`.
+`ErrInvalidPolicy`. Required interface dependencies and configured optional
+interfaces reject both nil and typed-nil values.
 
 ## Results
 
@@ -62,8 +63,11 @@ authoritative absence. A loader error is not absence and matches `ErrLoader`.
 Flights are bounded globally by `MaxConcurrent` and per key by
 `MaxWaitersPerKey`. Caller cancellation detaches that caller; it does not cancel
 a load still needed by other callers. `Close` cancels the shared load context,
-waits for all flight cleanup, and makes subsequent operations return
-`ErrClosed`.
+waits up to five seconds for flight cleanup, and makes subsequent operations
+return `ErrClosed`. `Shutdown(ctx)` uses the caller's bound. Either returns
+`ErrShutdownIncomplete` if loader cleanup remains when its bound ends.
+Passing nil to `Shutdown` returns `ErrInvalidConfig` without changing cache
+state.
 
 Successful same-instance mutations supersede an active load for that key, so a
 load cannot overwrite a `Set` or resurrect a `Delete`. Loaders must use their
@@ -98,11 +102,17 @@ Use `errors.Is`, not string matching. Important sentinels are:
 - `ErrInvalidTTL`, `ErrInvalidPolicy`, `ErrInvalidConfig`, and
   `ErrInvalidRecord`;
 - `ErrLoader`, `ErrLoaderPanic`, `ErrRecursiveLoad`, and `ErrWaiterLimit`;
-- `ErrCapacity`, `ErrBatchTooLarge`, and `ErrClosed`.
+- `ErrCapacity`, `ErrBatchTooLarge`, `ErrClosed`, and
+  `ErrShutdownIncomplete`;
 - `ErrOwnershipLost` and `ErrOwnershipUnsupported`.
 
-`Error` also exposes `Kind`, `Operation`, and the original cause. Context
-cancellation and deadlines are returned directly so `errors.Is` remains useful.
+`Error` exposes `Kind` and `Operation`; its protected source cause is not a
+public field.
+Public formatting and `errors.As` do not expose concrete backend, loader,
+key-encoder, or codec diagnostics. `errors.Is` still recognizes their identity
+and the stable cache sentinel. Context cancellation and deadlines are returned
+directly. Construct classified errors with `NewError` so dependency causes use
+the same protection.
 
 ## Observers
 

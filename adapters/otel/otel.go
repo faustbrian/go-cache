@@ -7,7 +7,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	cache "github.com/faustbrian/go-cache"
+	cache "github.com/faustbrian/go-cache/v2"
 )
 
 // Observer exports semantic cache events as OpenTelemetry metrics.

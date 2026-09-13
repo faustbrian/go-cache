@@ -10,6 +10,21 @@ Versioning and keeps an Unreleased section at the top.
 - Add canonical memory, Redis, Valkey, service-lifecycle, OpenTelemetry, and
   slog integrations under `adapters/*` without changing their runtime
   contracts.
+- Add `Shutdown(ctx)` for caller-bounded loader cleanup and publish a versioned
+  repository threat model and risk register.
+
+### Fixed
+
+- Redact recovered loader panic values while retaining `ErrLoaderPanic`
+  classification.
+- Redact backend, loader, key-encoder, and codec diagnostics from public error
+  text and `errors.As` while retaining stable `errors.Is` identities. Code that
+  inspected concrete dependency errors must move diagnostics to the trusted
+  dependency boundary.
+- Bound `Close` so a cancellation-ignoring loader cannot block shutdown
+  indefinitely.
+- Keep completed load flights attached while an explicit mutation holds their
+  publication lock, so a replacement loader cannot overwrite that mutation.
 
 ### Deprecated
 
@@ -19,6 +34,18 @@ Versioning and keeps an Unreleased section at the top.
   backend behavior during the documented migration interval.
 
 ### Changed
+
+- Prepare these intentional stable-contract changes on the unpublished
+  `github.com/faustbrian/go-cache/v2` module path. After v2 is released,
+  consumers must update all root and subpackage imports; v1 remains on its
+  existing behavior.
+- Reject typed-nil backend, codec, clock, jitter, observer, key-encoder, Redis,
+  and Valkey dependencies during construction instead of allowing later
+  panics. `Shutdown(nil)` now returns `ErrInvalidConfig`.
+- Remove public `Error.Cause`; use `errors.Is` for protected source identity and
+  capture full dependency diagnostics only at a trusted dependency boundary.
+- Recheck shutdown cancellation while holding the final load-publication lock,
+  preventing positive or negative writes after shutdown starts.
 
 - Adopt the checksum-verified `go-library-tools` v1.4.0 CLI, schema-v2
   cohesion contract, and local `make cohesion` gate without changing cache

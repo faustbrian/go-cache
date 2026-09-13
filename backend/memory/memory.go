@@ -3,8 +3,8 @@ package memory
 import (
 	"context"
 
-	cache "github.com/faustbrian/go-cache"
-	cachememory "github.com/faustbrian/go-cache/adapters/memory"
+	cache "github.com/faustbrian/go-cache/v2"
+	cachememory "github.com/faustbrian/go-cache/v2/adapters/memory"
 )
 
 // Config defines hard entry and retained-byte limits for a Backend.

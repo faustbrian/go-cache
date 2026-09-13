@@ -12,7 +12,8 @@ are capped by `MaxWaitersPerKey`.
 Each caller waits with its own context. Cancellation detaches only that waiter.
 The loader receives a cache-owned context so one impatient caller cannot cancel
 work needed by others. `Close` cancels that shared context, prevents new
-flights, waits for active goroutines, and is idempotent.
+flights, waits up to five seconds for active goroutines, and is idempotent.
+`Shutdown` accepts a caller-owned context when another deadline is required.
 
 Loader panics are recovered, classified as `ErrLoaderPanic`, and cannot poison
 the flight map. Source errors match `ErrLoader`; they are never converted into
@@ -38,7 +39,9 @@ reads therefore start one background refresh per key. Stale-if-error waits on
 the same foreground flight and returns the stale value plus the refresh error.
 
 Applications must make loaders context-aware and must bound their own network
-clients. A loader that ignores cancellation can delay `Close` indefinitely.
+clients. A loader that ignores cancellation may outlive shutdown, but the cache
+rejects new loads after closure. `Close` returns `ErrShutdownIncomplete` after
+five seconds; `Shutdown` returns it when the supplied context ends.
 
 The global loader semaphore does not promise FIFO fairness. Independent keys
 make progress subject to Go scheduler and channel scheduling. A loader must not

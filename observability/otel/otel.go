@@ -3,8 +3,8 @@ package otel
 import (
 	"context"
 
-	cache "github.com/faustbrian/go-cache"
-	cacheotel "github.com/faustbrian/go-cache/adapters/otel"
+	cache "github.com/faustbrian/go-cache/v2"
+	cacheotel "github.com/faustbrian/go-cache/v2/adapters/otel"
 	"go.opentelemetry.io/otel/metric"
 )
 

@@ -26,6 +26,8 @@ var (
 	ErrCapacity = errors.New("cache capacity exceeded")
 	// ErrClosed identifies use after cache or backend shutdown.
 	ErrClosed = errors.New("cache backend closed")
+	// ErrShutdownIncomplete identifies shutdown ending with active loader work.
+	ErrShutdownIncomplete = errors.New("cache shutdown incomplete")
 	// ErrLoader identifies a source loader failure.
 	ErrLoader = errors.New("cache loader error")
 	// ErrLoaderPanic identifies a recovered loader panic.
@@ -86,21 +88,40 @@ const (
 	OperationExpire Operation = "expire"
 )
 
-// Error combines a stable semantic kind with the underlying cause.
+// Error combines a stable semantic kind with a protected cause identity.
+// Construct errors with NewError when a source cause must remain recognizable
+// through errors.Is without exposing its text or concrete type.
 type Error struct {
 	Kind      ErrorKind
 	Operation Operation
-	Cause     error
+	cause     error
+}
+
+type protectedCause struct {
+	cause error
+}
+
+func (cause *protectedCause) Error() string { return "sensitive cache error" }
+
+func (cause *protectedCause) Is(target error) bool {
+	return cause != nil && errors.Is(cause.cause, target)
+}
+
+// NewError creates a classified error whose cause remains recognizable with
+// errors.Is but is hidden from formatting and errors.As.
+func NewError(kind ErrorKind, operation Operation, cause error) *Error {
+	return &Error{Kind: kind, Operation: operation, cause: protectCause(cause)}
 }
 
 func (e *Error) Error() string {
 	if e == nil {
 		return "<nil>"
 	}
-	if e.Cause == nil {
-		return fmt.Sprintf("cache %s failed", e.Operation)
+	message := fmt.Sprintf("cache %s failed", e.Operation)
+	if sentinel := sentinelForKind(e.Kind); sentinel != nil {
+		return fmt.Sprintf("%s: %v", message, sentinel)
 	}
-	return fmt.Sprintf("cache %s failed: %v", e.Operation, e.Cause)
+	return message
 }
 
 func (e *Error) Unwrap() []error {
@@ -109,15 +130,22 @@ func (e *Error) Unwrap() []error {
 	}
 	sentinel := sentinelForKind(e.Kind)
 	if sentinel == nil {
-		if e.Cause == nil {
+		if e.cause == nil {
 			return nil
 		}
-		return []error{e.Cause}
+		return []error{e.cause}
 	}
-	if e.Cause == nil {
+	if e.cause == nil {
 		return []error{sentinel}
 	}
-	return []error{sentinel, e.Cause}
+	return []error{sentinel, e.cause}
+}
+
+func protectCause(cause error) error {
+	if cause == nil {
+		return nil
+	}
+	return &protectedCause{cause: cause}
 }
 
 func sentinelForKind(kind ErrorKind) error {

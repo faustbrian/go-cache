@@ -2,10 +2,11 @@ package cache_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/go-cache"
+	cache "github.com/faustbrian/go-cache/v2"
 )
 
 func TestResultStatesAreUnambiguous(t *testing.T) {
@@ -25,7 +26,7 @@ func TestSentinelErrorsRemainClassifiableThroughOperationError(t *testing.T) {
 	t.Parallel()
 
 	cause := errors.New("connection refused")
-	err := &cache.Error{Kind: cache.BackendError, Operation: cache.OperationGet, Cause: cause}
+	err := cache.NewError(cache.BackendError, cache.OperationGet, cause)
 
 	if !errors.Is(err, cache.ErrBackend) {
 		t.Fatalf("backend error must match ErrBackend: %v", err)
@@ -82,8 +83,11 @@ func TestNewClassifiesInvalidConfigurationAndLoadPolicy(t *testing.T) {
 
 	configurationTests := map[string]func(*cache.Config[string, string]){
 		"nil backend":        func(config *cache.Config[string, string]) { config.Backend = nil },
+		"typed nil backend":  func(config *cache.Config[string, string]) { config.Backend = (*nilBackend)(nil) },
 		"nil codec":          func(config *cache.Config[string, string]) { config.Codec = nil },
+		"typed nil codec":    func(config *cache.Config[string, string]) { config.Codec = (*nilCodec)(nil) },
 		"nil clock":          func(config *cache.Config[string, string]) { config.Clock = nil },
+		"typed nil clock":    func(config *cache.Config[string, string]) { config.Clock = (*nilClock)(nil) },
 		"zero value limit":   func(config *cache.Config[string, string]) { config.MaxValue = 0 },
 		"negative batch max": func(config *cache.Config[string, string]) { config.MaxBatch = -1 },
 	}
@@ -116,6 +120,26 @@ func TestNewClassifiesInvalidConfigurationAndLoadPolicy(t *testing.T) {
 	}
 }
 
+func TestNewRejectsTypedNilOptionalDependencies(t *testing.T) {
+	t.Parallel()
+
+	config := cache.Config[string, string]{
+		Backend: newRecordingBackend(), Keys: mustStringKeySpace(t), Codec: cache.JSONCodec[string]{Version: 1},
+		TTL: cache.TTLPolicy{TTL: time.Minute}, Clock: fixedClock{now: time.Now()}, MaxValue: 1024,
+		Load: cache.LoadPolicy{RefreshJitter: time.Second},
+	}
+	config.Jitter = (*nilJitter)(nil)
+	if _, err := cache.New(config); !errors.Is(err, cache.ErrInvalidConfig) {
+		t.Fatalf("typed nil jitter returned %v, want ErrInvalidConfig", err)
+	}
+
+	config.Jitter = cache.RandomJitter{}
+	config.Observer = (*nilObserver)(nil)
+	if _, err := cache.New(config); !errors.Is(err, cache.ErrInvalidConfig) {
+		t.Fatalf("typed nil observer returned %v, want ErrInvalidConfig", err)
+	}
+}
+
 func TestOperationErrorsClassifyWithoutNilUnwrapChildren(t *testing.T) {
 	t.Parallel()
 
@@ -145,7 +169,7 @@ func TestOperationErrorsClassifyWithoutNilUnwrapChildren(t *testing.T) {
 	}
 }
 
-func TestOperationErrorStringsDescribeNilAndWrappedCauses(t *testing.T) {
+func TestOperationErrorStringsRedactWrappedCauses(t *testing.T) {
 	t.Parallel()
 
 	var nilError *cache.Error
@@ -156,17 +180,33 @@ func TestOperationErrorStringsDescribeNilAndWrappedCauses(t *testing.T) {
 	if withoutCause.Error() != "cache delete failed" {
 		t.Fatalf("cause-free error string: %q", withoutCause.Error())
 	}
-	withCause := &cache.Error{Operation: cache.OperationGet, Cause: errors.New("offline")}
-	if withCause.Error() != "cache get failed: offline" {
+	const sensitive = "redis://username:credential@cache.internal/customer"
+	cause := &sensitiveCause{message: sensitive}
+	withCause := cache.NewError(cache.BackendError, cache.OperationGet, cause)
+	if withCause.Error() != "cache get failed: cache backend error" {
 		t.Fatalf("wrapped error string: %q", withCause.Error())
+	}
+	if strings.Contains(withCause.Error(), sensitive) {
+		t.Fatal("Error() exposed the wrapped cause")
+	}
+	var exposed *sensitiveCause
+	if errors.As(withCause, &exposed) {
+		t.Fatal("errors.As exposed the wrapped concrete cause")
+	}
+	if !errors.Is(withCause, cause) {
+		t.Fatal("errors.Is no longer recognizes the wrapped cause")
 	}
 	if children := nilError.Unwrap(); children != nil {
 		t.Fatalf("nil error unwrap returned %#v", children)
 	}
-	cause := errors.New("unknown failure")
-	unknown := &cache.Error{Kind: cache.ErrorKind(255), Operation: cache.OperationGet, Cause: cause}
+	unknownCause := errors.New("unknown failure")
+	unknown := cache.NewError(cache.ErrorKind(255), cache.OperationGet, unknownCause)
 	children := unknown.Unwrap()
-	if len(children) != 1 || !errors.Is(children[0], cause) {
+	if len(children) != 1 || !errors.Is(children[0], unknownCause) {
 		t.Fatalf("unknown kind did not preserve cause: %#v", children)
 	}
 }
+
+type sensitiveCause struct{ message string }
+
+func (cause *sensitiveCause) Error() string { return cause.message }

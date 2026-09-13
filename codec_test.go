@@ -1,10 +1,12 @@
 package cache_test
 
 import (
+	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
-	cache "github.com/faustbrian/go-cache"
+	cache "github.com/faustbrian/go-cache/v2"
 )
 
 type testPayload struct {
@@ -78,6 +80,11 @@ func TestJSONCodecRejectsInvalidVersionsAndAmbiguousJSON(t *testing.T) {
 	}
 	if _, err := (cache.JSONCodec[func()]{Version: 1}).Encode(func() {}); !errors.Is(err, cache.ErrDecode) {
 		t.Fatalf("unsupported value encode returned %v", err)
+	} else {
+		var exposed *json.UnsupportedTypeError
+		if errors.As(err, &exposed) || strings.Contains(err.Error(), "func()") {
+			t.Fatalf("unsupported value diagnostic was exposed: %v", err)
+		}
 	}
 	codec := cache.JSONCodec[testPayload]{Version: 1, MaxEncodedSize: 8}
 	if _, err := codec.Decode(make([]byte, 9)); !errors.Is(err, cache.ErrValueTooLarge) {
@@ -88,6 +95,14 @@ func TestJSONCodecRejectsInvalidVersionsAndAmbiguousJSON(t *testing.T) {
 	}
 	if _, err := codec.Decode([]byte{1, '{', '}', '{', '}'}); !errors.Is(err, cache.ErrDecode) {
 		t.Fatalf("trailing JSON returned %v", err)
+	}
+	if _, err := codec.Decode([]byte{1, '{'}); !errors.Is(err, cache.ErrDecode) {
+		t.Fatalf("syntax error returned %v", err)
+	} else {
+		var exposed *json.SyntaxError
+		if errors.As(err, &exposed) {
+			t.Fatal("errors.As exposed the JSON decoder cause")
+		}
 	}
 }
 

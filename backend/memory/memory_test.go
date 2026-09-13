@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/go-cache"
-	"github.com/faustbrian/go-cache/backend/memory"
+	cache "github.com/faustbrian/go-cache/v2"
+	"github.com/faustbrian/go-cache/v2/backend/memory"
 )
 
 func TestNewRejectsInvalidConfiguration(t *testing.T) {

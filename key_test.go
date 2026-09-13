@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	cache "github.com/faustbrian/go-cache"
+	cache "github.com/faustbrian/go-cache/v2"
 )
 
 func TestKeySpaceBuildsDeterministicCollisionSafeKeys(t *testing.T) {
@@ -97,6 +97,7 @@ func TestKeySpaceRejectsEveryInvalidComponent(t *testing.T) {
 		"invalid name":        {"namespace", "bad name", 1, cache.StringKeyEncoder{}, 128},
 		"zero version":        {"namespace", "name", 0, cache.StringKeyEncoder{}, 128},
 		"nil encoder":         {"namespace", "name", 1, nil, 128},
+		"typed nil encoder":   {"namespace", "name", 1, (*nilKeyEncoder)(nil), 128},
 		"zero maximum":        {"namespace", "name", 1, cache.StringKeyEncoder{}, 0},
 	}
 	for name, test := range tests {
@@ -113,17 +114,29 @@ func TestKeySpaceRejectsEveryInvalidComponent(t *testing.T) {
 func TestKeySpaceClassifiesEncoderFailure(t *testing.T) {
 	t.Parallel()
 
-	cause := errors.New("canonicalization failed")
+	const sensitive = "tenant/customer@example.com"
+	cause := &sensitiveCause{message: sensitive}
 	space, err := cache.NewKeySpace("billing", "invoice", 1, failingKeyEncoder{err: cause}, 128)
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, err = space.Key("key")
-	if !errors.Is(err, cache.ErrInvalidKey) || !strings.Contains(fmt.Sprint(err), cause.Error()) {
+	if !errors.Is(err, cache.ErrInvalidKey) || !errors.Is(err, cause) {
 		t.Fatalf("Key returned %v", err)
+	}
+	if strings.Contains(fmt.Sprint(err), sensitive) {
+		t.Fatal("Key exposed the encoder diagnostic")
+	}
+	var exposed *sensitiveCause
+	if errors.As(err, &exposed) {
+		t.Fatal("errors.As exposed the encoder cause")
 	}
 }
 
 type failingKeyEncoder struct{ err error }
 
 func (e failingKeyEncoder) EncodeKey(string) ([]byte, error) { return nil, e.err }
+
+type nilKeyEncoder struct{}
+
+func (*nilKeyEncoder) EncodeKey(string) ([]byte, error) { return nil, nil }

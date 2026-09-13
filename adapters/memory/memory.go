@@ -5,7 +5,7 @@ import (
 	"context"
 	"sync"
 
-	cache "github.com/faustbrian/go-cache"
+	cache "github.com/faustbrian/go-cache/v2"
 )
 
 // Config defines hard entry and retained-byte limits for a Backend.

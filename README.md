@@ -20,7 +20,9 @@ The semantic API does not expose Redis or Valkey client types. Backends keep
 their native clients and atomic behavior while applications share one portable
 contract.
 
-The module is a stable member of Golib's Persistence and durability family.
+The published v1 module is a stable member of Golib's Persistence and
+durability family. The current source prepares an unpublished v2 module with
+protected-error and bounded-shutdown contracts.
 For ecosystem-wide selection and ownership guidance, see the versioned
 [Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/README.md)
 and its
@@ -97,6 +99,16 @@ func main() {
 	}
 	fmt.Println(result.State, result.Value.Name)
 }
+```
+
+## Planned v2
+
+The `/v2` module in the current source is not published. After a `v2.0.0`
+release exists, consumers can migrate with the guide in `docs/migration.md`
+and install it with this future-only command:
+
+```sh
+go get github.com/faustbrian/go-cache/v2@v2.0.0
 ```
 
 Always inspect `Result.State`; a stored zero value can be a `Hit`. A miss is not
