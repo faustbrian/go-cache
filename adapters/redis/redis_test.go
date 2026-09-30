@@ -135,3 +135,36 @@ func (cause *sensitiveClientError) Error() string { return cause.message }
 type nilClock struct{}
 
 func (*nilClock) Now() time.Time { return time.Time{} }
+
+func TestNewValidatesNilableClocks(t *testing.T) {
+	t.Parallel()
+	client := redisclient.NewClient(&redisclient.Options{Addr: "cache.invalid:6379"})
+	t.Cleanup(func() { _ = client.Close() })
+	for name, clock := range map[string]cache.Clock{
+		"channel":  channelClock(nil),
+		"function": functionClock(nil),
+	} {
+		t.Run(name, func(t *testing.T) {
+			backend, err := cacheredis.New(cacheredis.Config{
+				Client: client, Clock: clock, MaxRecordSize: 1024,
+			})
+			if backend != nil || !errors.Is(err, cache.ErrInvalidConfig) {
+				t.Fatalf("nil %s clock returned backend=%v error=%v, want nil and ErrInvalidConfig", name, backend, err)
+			}
+		})
+	}
+	backend, err := cacheredis.New(cacheredis.Config{
+		Client: client, Clock: functionClock(time.Now), MaxRecordSize: 1024,
+	})
+	if backend == nil || err != nil {
+		t.Fatalf("non-nil function clock returned backend=%v error=%v, want backend and nil", backend, err)
+	}
+}
+
+type channelClock chan struct{}
+
+func (channelClock) Now() time.Time { return time.Time{} }
+
+type functionClock func() time.Time
+
+func (clock functionClock) Now() time.Time { return clock() }
