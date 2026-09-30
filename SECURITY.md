@@ -2,10 +2,12 @@
 
 ## Supported versions
 
-Security fixes are provided for the latest released major/minor line. The
-current source prepares an unpublished v2 module with protected-error and
-bounded-shutdown contracts; v1 consumers must wait for a public v2 release and
-then follow `docs/migration.md` to adopt them.
+Security fixes are provided for the latest published stable major/minor line.
+Publication of a new stable major supersedes the previous major; breaking
+security fixes are not backported. Until v2 is published, v1 remains the latest
+published line. The v2.0.0 release candidate adds protected-error,
+bounded-shutdown and bounded-flight contracts; confirm public v2 resolution
+and follow `docs/migration.md` to adopt them.
 
 ## Reporting
 

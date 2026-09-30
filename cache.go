@@ -13,10 +13,14 @@ import (
 
 const (
 	defaultMaxConcurrentLoaders = 64
+	defaultMaxFlights           = 1024
 	defaultMaxWaitersPerKey     = 1024
 	defaultMaxBatch             = 1000
 	defaultCloseTimeout         = 5 * time.Second
 )
+
+// MaxLoadFlights bounds configured loader concurrency and retained flight work.
+const MaxLoadFlights = 1 << 16
 
 // LoadResult is the value and existence result returned by a Loader.
 type LoadResult[V any] struct {
@@ -46,7 +50,10 @@ func (RandomJitter) Duration(upperBound time.Duration) time.Duration {
 
 // LoadPolicy bounds loading and enables optional negative and stale behavior.
 type LoadPolicy struct {
-	MaxConcurrent        int
+	MaxConcurrent int
+	// MaxFlights bounds distinct-key flights, including queued loads and
+	// completed flights retained by an explicit mutation. Zero defaults to 1024.
+	MaxFlights           int
 	MaxWaitersPerKey     int
 	NegativeTTL          time.Duration
 	StaleWhileRevalidate bool
@@ -118,7 +125,7 @@ func New[K, V any](config Config[K, V]) (*Cache[K, V], error) {
 	if err := config.TTL.Validate(); err != nil {
 		return nil, err
 	}
-	if config.Load.NegativeTTL < 0 || config.Load.MaxConcurrent < 0 || config.Load.MaxWaitersPerKey < 0 || config.Load.RefreshJitter < 0 {
+	if config.Load.NegativeTTL < 0 || config.Load.MaxConcurrent < 0 || config.Load.MaxConcurrent > MaxLoadFlights || config.Load.MaxFlights < 0 || config.Load.MaxFlights > MaxLoadFlights || config.Load.MaxWaitersPerKey < 0 || config.Load.RefreshJitter < 0 {
 		return nil, NewError(PolicyError, OperationLoad, ErrInvalidPolicy)
 	}
 	if config.Load.StaleWhileRevalidate && config.Load.StaleIfError {
@@ -137,6 +144,12 @@ func New[K, V any](config Config[K, V]) (*Cache[K, V], error) {
 	switch cmp.Compare(config.Load.MaxConcurrent, 0) {
 	case 0:
 		config.Load.MaxConcurrent = defaultMaxConcurrentLoaders
+	}
+	if config.Load.MaxFlights == 0 {
+		config.Load.MaxFlights = defaultMaxFlights
+	}
+	if config.Load.MaxFlights < config.Load.MaxConcurrent {
+		return nil, NewError(PolicyError, OperationLoad, ErrInvalidPolicy)
 	}
 	switch cmp.Compare(config.Load.MaxWaitersPerKey, 0) {
 	case 0:
@@ -304,10 +317,11 @@ func (c *Cache[K, V]) GetOrLoad(ctx context.Context, logical K, loader Loader[K,
 		}
 		flight.waiters++
 	} else {
-		flight = &loadFlight[V]{done: make(chan struct{}), waiters: 1}
-		c.flights[key] = flight
-		c.activeLoads++
-		go c.runLoad(key, logical, loader, flight)
+		flight, err = c.admitFlightLocked(key, logical, loader, 1)
+		if err != nil {
+			c.loadMu.Unlock()
+			return Result[V]{}, err
+		}
 	}
 	c.loadMu.Unlock()
 
@@ -333,11 +347,22 @@ func (c *Cache[K, V]) startBackgroundLoad(key string, logical K, loader Loader[K
 	if _, found := c.flights[key]; found {
 		return nil
 	}
-	flight := &loadFlight[V]{done: make(chan struct{})}
+	_, err := c.admitFlightLocked(key, logical, loader, 0)
+	return err
+}
+
+// Admission precedes allocation and spawning; loader slots alone do not bound
+// distinct-key work waiting to enter the loader. Mutation-reserved completed
+// flights remain in the map and must continue consuming this budget.
+func (c *Cache[K, V]) admitFlightLocked(key string, logical K, loader Loader[K, V], waiters int) (*loadFlight[V], error) {
+	if len(c.flights) >= c.load.MaxFlights || c.activeLoads >= c.load.MaxFlights {
+		return nil, ErrFlightLimit
+	}
+	flight := &loadFlight[V]{done: make(chan struct{}), waiters: waiters}
 	c.flights[key] = flight
 	c.activeLoads++
 	go c.runLoad(key, logical, loader, flight)
-	return nil
+	return flight, nil
 }
 
 func (c *Cache[K, V]) runLoad(key string, logical K, loader Loader[K, V], flight *loadFlight[V]) {
@@ -490,7 +515,9 @@ func (c *Cache[K, V]) Close() error {
 }
 
 // Shutdown cancels active loads, rejects new loads, and waits for loader
-// cleanup within ctx.
+// cleanup within ctx. A nil error means all active loads have completed.
+// ErrShutdownIncomplete permits late completion of already-admitted backend
+// work when trusted callbacks or backends ignore cancellation.
 func (c *Cache[K, V]) Shutdown(ctx context.Context) error {
 	if ctx == nil {
 		return ErrInvalidConfig

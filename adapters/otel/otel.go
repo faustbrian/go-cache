@@ -3,6 +3,7 @@ package cacheotel
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -20,7 +21,7 @@ type Observer struct {
 
 // New constructs all instruments required by an Observer.
 func New(meter metric.Meter) (*Observer, error) {
-	if meter == nil {
+	if isNilDependency(meter) {
 		return nil, fmt.Errorf("OpenTelemetry observer requires a meter")
 	}
 	operations, err := meter.Int64Counter(
@@ -61,6 +62,19 @@ func New(meter metric.Meter) (*Observer, error) {
 		valueSize:  valueSize,
 		memorySize: memorySize,
 	}, nil
+}
+
+func isNilDependency(dependency any) bool {
+	if dependency == nil {
+		return true
+	}
+	value := reflect.ValueOf(dependency)
+	switch value.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return value.IsNil()
+	default:
+		return false
+	}
 }
 
 // Observe records one validated, low-cardinality cache event.

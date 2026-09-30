@@ -36,6 +36,8 @@ var (
 	ErrRecursiveLoad = errors.New("recursive cache load")
 	// ErrWaiterLimit identifies excess callers for one active key flight.
 	ErrWaiterLimit = errors.New("cache waiter limit exceeded")
+	// ErrFlightLimit identifies excess distinct-key load or refresh work.
+	ErrFlightLimit = errors.New("cache flight limit exceeded")
 	// ErrInvalidPolicy identifies invalid or contradictory policy options.
 	ErrInvalidPolicy = errors.New("invalid cache policy")
 	// ErrBatchTooLarge identifies a bulk request beyond its configured bound.

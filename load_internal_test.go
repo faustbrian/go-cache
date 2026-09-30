@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -281,6 +282,84 @@ type publicationBackend struct {
 	setCount int
 }
 
+// These barriers pause trusted callbacks after runLoad's cancellation check,
+// before the actual backend call, without adding another production seam.
+type publicationCodec struct {
+	JSONCodec[string]
+	reached chan struct{}
+	release chan struct{}
+}
+
+func (codec publicationCodec) Encode(value string) ([]byte, error) {
+	close(codec.reached)
+	<-codec.release
+	return codec.JSONCodec.Encode(value)
+}
+
+type publicationClock struct {
+	armed   atomic.Bool
+	reached chan struct{}
+	release chan struct{}
+}
+
+func (clock *publicationClock) Now() time.Time {
+	if clock.armed.Swap(false) {
+		close(clock.reached)
+		<-clock.release
+	}
+	return time.Now()
+}
+
+func TestIncompleteShutdownPermitsAdmittedBackendPublication(t *testing.T) {
+	for _, found := range []bool{true, false} {
+		name := "negative"
+		if found {
+			name = "positive"
+		}
+		t.Run(name, func(t *testing.T) {
+			backend := &publicationBackend{} // Deliberately ignores context.
+			store := newInternalLoadingCache(t, backend)
+			store.load.NegativeTTL = time.Minute
+			reached, release := make(chan struct{}), make(chan struct{})
+			var releaseOnce sync.Once
+			defer releaseOnce.Do(func() { close(release) })
+			if found {
+				store.codec = publicationCodec{JSONCodec: JSONCodec[string]{Version: 1}, reached: reached, release: release}
+			} else {
+				clock := &publicationClock{reached: reached, release: release}
+				store.clock = clock
+				store.beforeLoadPublication = func() { clock.armed.Store(true) }
+			}
+			done := make(chan error, 1)
+			go func() {
+				_, err := store.GetOrLoad(t.Context(), "key", func(context.Context, string) (LoadResult[string], error) {
+					return LoadResult[string]{Value: "late", Found: found}, nil
+				})
+				done <- err
+			}()
+			waitInternalSignal(t, reached)
+			ctx, cancel := context.WithTimeout(t.Context(), 25*time.Millisecond)
+			defer cancel()
+			if err := store.Shutdown(ctx); !errors.Is(err, ErrShutdownIncomplete) || !errors.Is(err, context.DeadlineExceeded) {
+				t.Fatalf("blocked publication shutdown = %v, want incomplete deadline", err)
+			}
+			if backend.writes() != 0 {
+				t.Fatal("backend wrote before callback release")
+			}
+			releaseOnce.Do(func() { close(release) })
+			if err := <-done; err != nil {
+				t.Fatalf("admitted publication = %v", err)
+			}
+			if backend.writes() != 1 {
+				t.Fatalf("late writes = %d, want 1", backend.writes())
+			}
+			if err := store.Shutdown(t.Context()); err != nil {
+				t.Fatalf("completed shutdown = %v", err)
+			}
+		})
+	}
+}
+
 func (*publicationBackend) Get(context.Context, string) (Record, bool, error) {
 	return Record{}, false, nil
 }
@@ -303,6 +382,7 @@ func (backend *publicationBackend) writes() int {
 func TestFinishedFlightRemainsAttachedDuringExplicitMutation(t *testing.T) {
 	backend := newSupersessionBackend()
 	store := newInternalLoadingCache(t, backend)
+	store.load.MaxFlights = 1
 
 	firstLoadDone := make(chan error, 1)
 	go func() {
@@ -321,6 +401,13 @@ func TestFinishedFlightRemainsAttachedDuringExplicitMutation(t *testing.T) {
 	if err := <-firstLoadDone; err != nil {
 		close(backend.releaseExplicitSet)
 		t.Fatalf("first load returned %v", err)
+	}
+	if _, err := store.GetOrLoad(t.Context(), "other-key", func(context.Context, string) (LoadResult[string], error) {
+		t.Error("mutation-reserved flight allowed a distinct loader")
+		return LoadResult[string]{}, nil
+	}); !errors.Is(err, ErrFlightLimit) {
+		close(backend.releaseExplicitSet)
+		t.Fatalf("mutation-reserved budget: %v", err)
 	}
 
 	var secondLoaderCalls int

@@ -5,6 +5,8 @@ Versioning and keeps an Unreleased section at the top.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-09-30
+
 ### Added
 
 - Add canonical memory, Redis, Valkey, service-lifecycle, OpenTelemetry, and
@@ -15,6 +17,10 @@ Versioning and keeps an Unreleased section at the top.
 
 ### Fixed
 
+- Reject excess distinct-key foreground and stale-refresh flights before
+  allocation or goroutine creation. `LoadPolicy.MaxFlights` defaults to 1024,
+  includes queued and mutation-retained work, and is bounded to 65536;
+  excess new keys return `ErrFlightLimit` without disclosing the key.
 - Redact recovered loader panic values while retaining `ErrLoaderPanic`
   classification.
 - Redact backend, loader, key-encoder, and codec diagnostics from public error
@@ -35,17 +41,20 @@ Versioning and keeps an Unreleased section at the top.
 
 ### Changed
 
-- Prepare these intentional stable-contract changes on the unpublished
-  `github.com/faustbrian/go-cache/v2` module path. After v2 is released,
+- Bound `MaxConcurrent` to 65536 and require it not to exceed `MaxFlights`.
+  Existing-key coalescing and per-key waiter limits remain independent.
+- Move these intentional stable-contract changes to the
+  `github.com/faustbrian/go-cache/v2` module path. After v2 is published,
   consumers must update all root and subpackage imports; v1 remains on its
   existing behavior.
-- Reject typed-nil backend, codec, clock, jitter, observer, key-encoder, Redis,
-  and Valkey dependencies during construction instead of allowing later
+- Reject typed-nil backend, codec, clock, jitter, observer, key-encoder, meter,
+  Redis and Valkey dependencies during construction instead of allowing later
   panics. `Shutdown(nil)` now returns `ErrInvalidConfig`.
 - Remove public `Error.Cause`; use `errors.Is` for protected source identity and
   capture full dependency diagnostics only at a trusted dependency boundary.
-- Recheck shutdown cancellation while holding the final load-publication lock,
-  preventing positive or negative writes after shutdown starts.
+- Recheck shutdown cancellation before load-publication admission. Successful
+  shutdown joins all active loads; an incomplete shutdown can be followed by
+  late publication from an already-admitted, cancellation-ignoring backend.
 
 - Adopt the checksum-verified `go-library-tools` v1.4.0 CLI, schema-v2
   cohesion contract, and local `make cohesion` gate without changing cache

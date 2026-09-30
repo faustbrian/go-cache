@@ -17,7 +17,7 @@ migration notes. Starting with `v1`, SemVer applies to:
 - metric names, units, and label sets.
 
 The immutable released-v1 API snapshot is retained at
-`api/v1-baseline.txt`. The active unpublished-v2 source is checked against
+`api/v1-baseline.txt`. The active v2 release candidate is checked against
 `api/v2-baseline.txt`; the baselines are intentionally independent because v2
 contains documented incompatible contracts.
 

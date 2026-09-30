@@ -2,13 +2,13 @@
 
 ## From v1 to v2
 
-Version 2 is planned but unpublished. Do not change production dependencies
-until a `v2.0.0` tag resolves from the public module proxy without a local
+The current source is the v2.0.0 release candidate. Do not change production
+dependencies until its tag resolves from the public module proxy without a local
 `replace` directive.
 
 Change the module and every package import from
 `github.com/faustbrian/go-cache` to `github.com/faustbrian/go-cache/v2`.
-Version 2 intentionally changes two stable v1 contracts: `Close` is bounded to
+Version 2 intentionally changes stable v1 contracts: `Close` is bounded to
 five seconds, and dependency causes are protected from public formatting,
 `Error` fields, and `errors.As` traversal.
 
@@ -21,6 +21,11 @@ shutdown deadline, and never pass a nil context; nil is `ErrInvalidConfig`.
 
 Constructors now reject typed-nil interface dependencies. Validate dependency
 assembly during migration instead of relying on a later operation to panic.
+
+Set `MaxFlights` for the total distinct-key loading budget (default 1024,
+maximum 65536) and keep `MaxConcurrent` no greater than it. Handle
+`ErrFlightLimit` as local saturation, not a source failure; stale refreshes
+return the existing stale result together with this error.
 
 Release remains blocked until public v2 resolution and clean consumer checks
 succeed without local replacements. Known direct consumers requiring import
@@ -45,8 +50,8 @@ scan is required.
 ## From singleflight wrappers
 
 Replace unbounded `singleflight.Group` use with `GetOrLoad`. Set measured
-`MaxConcurrent` and `MaxWaitersPerKey` values, make loaders honor their supplied
-context, and call `Close` during shutdown.
+`MaxConcurrent`, `MaxFlights`, and `MaxWaitersPerKey` values, make loaders honor
+their supplied context, and call `Close` during shutdown.
 
 ## From concrete dependency error inspection
 
@@ -60,7 +65,9 @@ returning the error; do not log credentials, logical keys, or payloads. Use
 
 Service shutdown should prefer `Shutdown(ctx)` with the service deadline.
 `Close` uses a five-second default and may return `ErrShutdownIncomplete` when
-application loader code ignores cancellation.
+application loader, callback or backend code ignores cancellation. It does not
+guarantee that already-admitted backend side effects have stopped; successful
+`Shutdown` joins all active loads and their publication.
 
 ## To canonical adapter paths
 

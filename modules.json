@@ -204,14 +204,14 @@
         }
       ],
       "purpose": "`cache` is a typed Go cache library with explicit hit, miss, stale, decode, and backend-failure semantics. It provides bounded cache-aside loading, versioned and hashed keys, strict codecs, a bounded memory backend, and native Redis and Valkey adapters. Valkey-backed caches can also publish a refresh only while a compatible distributed lease is still owned.",
-      "lifecycle": "planned",
+      "lifecycle": "stable",
       "kind": "public library",
-      "releasable": false,
+      "releasable": true,
       "family": "persistence-and-durability",
       "family_label": "Persistence And Durability",
       "family_description": "Durable state, delivery, coordination, recovery, and operational lifecycle.",
       "family_order": 4,
-      "version": "1.0.0",
+      "version": "2.0.0",
       "tag_prefix": "v",
       "owned_dependencies": [
         "github.com/faustbrian/go-cli",
@@ -284,8 +284,8 @@
           "github.com/faustbrian/go-cache/v2/observability/otel": "Deprecated compatibility path; use github.com/faustbrian/go-cache/v2/adapters/otel.",
           "github.com/faustbrian/go-cache/v2/observability/slog": "Deprecated compatibility path; use github.com/faustbrian/go-cache/v2/adapters/slog."
         },
-        "lifecycle_status": "planned",
-        "maturity": "preview",
+        "lifecycle_status": "active",
+        "maturity": "stable",
         "construction_styles": [
           "new-config",
           "new-options",

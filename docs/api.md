@@ -60,12 +60,18 @@ renew, or release leases.
 per backend key. The loader returns `LoadResult[V]{Found:false}` for an
 authoritative absence. A loader error is not absence and matches `ErrLoader`.
 
-Flights are bounded globally by `MaxConcurrent` and per key by
+Flights are bounded globally by `MaxFlights` (default 1024, maximum 65536);
+`MaxConcurrent` separately bounds executing loaders and cannot exceed that
+flight budget. New distinct-key work beyond the budget returns `ErrFlightLimit`
+before allocation or spawning. Existing-key followers are bounded by
 `MaxWaitersPerKey`. Caller cancellation detaches that caller; it does not cancel
 a load still needed by other callers. `Close` cancels the shared load context,
 waits up to five seconds for flight cleanup, and makes subsequent operations
 return `ErrClosed`. `Shutdown(ctx)` uses the caller's bound. Either returns
 `ErrShutdownIncomplete` if loader cleanup remains when its bound ends.
+An incomplete shutdown may be followed by late backend publication from
+already-admitted work if trusted callbacks or the backend ignore cancellation.
+A successful `Shutdown` joins all active loads and their publication.
 Passing nil to `Shutdown` returns `ErrInvalidConfig` without changing cache
 state.
 
@@ -101,7 +107,8 @@ Use `errors.Is`, not string matching. Important sentinels are:
 - `ErrInvalidKey`, `ErrKeyTooLarge`, and `ErrValueTooLarge`;
 - `ErrInvalidTTL`, `ErrInvalidPolicy`, `ErrInvalidConfig`, and
   `ErrInvalidRecord`;
-- `ErrLoader`, `ErrLoaderPanic`, `ErrRecursiveLoad`, and `ErrWaiterLimit`;
+- `ErrLoader`, `ErrLoaderPanic`, `ErrRecursiveLoad`, `ErrWaiterLimit`, and
+  `ErrFlightLimit`;
 - `ErrCapacity`, `ErrBatchTooLarge`, `ErrClosed`, and
   `ErrShutdownIncomplete`;
 - `ErrOwnershipLost` and `ErrOwnershipUnsupported`.

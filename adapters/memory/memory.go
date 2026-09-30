@@ -3,6 +3,7 @@ package cachememory
 import (
 	"container/list"
 	"context"
+	"reflect"
 	"sync"
 
 	cache "github.com/faustbrian/go-cache/v2"
@@ -47,7 +48,8 @@ type entry struct {
 
 // New validates config and constructs an empty memory backend.
 func New(config Config) (*Backend, error) {
-	if config.MaxEntries <= 0 || config.MaxBytes <= 0 || config.Clock == nil {
+	if config.MaxEntries <= 0 || config.MaxBytes <= 0 || isNilDependency(config.Clock) ||
+		(config.Observer != nil && isNilDependency(config.Observer)) {
 		return nil, cache.ErrInvalidConfig
 	}
 	return &Backend{
@@ -57,6 +59,19 @@ func New(config Config) (*Backend, error) {
 		observer:   config.Observer,
 		items:      make(map[string]*list.Element, config.MaxEntries),
 	}, nil
+}
+
+func isNilDependency(dependency any) bool {
+	if dependency == nil {
+		return true
+	}
+	value := reflect.ValueOf(dependency)
+	switch value.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return value.IsNil()
+	default:
+		return false
+	}
 }
 
 // Get returns a cloned live record or an explicit miss.
