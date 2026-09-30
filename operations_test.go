@@ -115,6 +115,43 @@ func (codec failingStringCodec) Encode(string) ([]byte, error) { return nil, cod
 
 func (codec failingStringCodec) Decode([]byte) (string, error) { return "", codec.err }
 
+func TestProtectedErrorFormattingAndAbsentCause(t *testing.T) {
+	t.Parallel()
+	cause := &sensitiveCause{message: "private dependency diagnostic"}
+	err := cache.NewError(cache.LoaderError, cache.OperationLoad, cause)
+	for _, child := range err.Unwrap() {
+		if strings.Contains(child.Error(), cause.message) {
+			t.Fatal("unwrapped error formatting exposed dependency diagnostic")
+		}
+	}
+	if !errors.Is(err, cause) {
+		t.Fatal("protected cause lost identity")
+	}
+	withoutCause := cache.NewError(cache.BackendError, cache.OperationGet, nil)
+	if !errors.Is(withoutCause, cache.ErrBackend) || len(withoutCause.Unwrap()) != 1 {
+		t.Fatalf("absent cause changed classification: %v", withoutCause)
+	}
+}
+
+func TestCodecSizeFailureRemainsLimitClassified(t *testing.T) {
+	t.Parallel()
+	store, err := cache.New(cache.Config[string, string]{
+		Backend: newRecordingBackend(), Keys: mustStringKeySpace(t),
+		Codec: failingStringCodec{err: cache.ErrValueTooLarge},
+		TTL:   cache.TTLPolicy{TTL: time.Minute}, Clock: cache.SystemClock{}, MaxValue: 1024,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	err = store.Set(t.Context(), "key", "value")
+	var classified *cache.Error
+	if !errors.Is(err, cache.ErrValueTooLarge) || errors.Is(err, cache.ErrDecode) ||
+		!errors.As(err, &classified) || classified.Kind != cache.LimitError {
+		t.Fatalf("codec size error = %v, want limit classification", err)
+	}
+}
+
 func TestGetRejectsCorruptBackendRecords(t *testing.T) {
 	t.Parallel()
 
