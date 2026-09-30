@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "repository": "github.com/faustbrian/go-cache",
+  "module": ".",
+  "package": "observability/slog",
+  "gate": "mutation",
+  "input_digest": "sha256:fe846f436eafb486d63143efd8f3fab82e717d46f2ca7c1c3284d0e23010deab",
+  "verifier_digest": "sha256:9a9499ff68a8dfd49a0be7995590297a8ee563a1aa226bfd8b9361dc53058108",
+  "result": "passed",
+  "report_digest": "sha256:78eaed1cd8af87481742ba44e0ced0105122b62d7391a8f0c45c432e1cea6a58",
+  "environment": {
+    "CGO_ENABLED": "1",
+    "GOARCH": "amd64",
+    "GOOS": "linux",
+    "GOVERSION": "go1.27.0",
+    "gremlins_binary_sha256": "sha256:c445d9c04ffe4d2070617fd4df511cb19e48135950462912be29133b1b0169cc"
+  },
+  "completed_at": "2026-09-30T06:24:26.845180409Z"
+}
