@@ -352,7 +352,7 @@
           "examples": "docs/examples.md",
           "faq": "docs/faq.md",
           "changelog": "CHANGELOG.md",
-          "pkg_go_dev": "https://pkg.go.dev/github.com/faustbrian/go-cache",
+          "pkg_go_dev": "https://pkg.go.dev/github.com/faustbrian/go-cache/v2",
           "ecosystem_index": "https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/README.md"
         },
         "known_good_compatibility_sets": [],
