@@ -353,7 +353,9 @@ func TestIncompleteShutdownPermitsAdmittedBackendPublication(t *testing.T) {
 			if backend.writes() != 1 {
 				t.Fatalf("late writes = %d, want 1", backend.writes())
 			}
-			if err := store.Shutdown(t.Context()); err != nil {
+			join, cancelJoin := context.WithTimeout(t.Context(), time.Second)
+			defer cancelJoin()
+			if err := store.Shutdown(join); err != nil {
 				t.Fatalf("completed shutdown = %v", err)
 			}
 		})

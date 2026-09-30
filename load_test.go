@@ -427,7 +427,9 @@ func TestShutdownUsesCallerDeadline(t *testing.T) {
 	if err := <-loadDone; !errors.Is(err, context.Canceled) {
 		t.Fatalf("GetOrLoad() error = %v, want context cancellation", err)
 	}
-	if err := store.Shutdown(context.Background()); err != nil {
+	join, cancelJoin := context.WithTimeout(t.Context(), time.Second)
+	defer cancelJoin()
+	if err := store.Shutdown(join); err != nil {
 		t.Fatalf("Shutdown() after load completion = %v", err)
 	}
 }
@@ -483,7 +485,9 @@ func TestShutdownPreventsLateNegativeCacheWrite(t *testing.T) {
 	if setCount != 0 {
 		t.Fatalf("backend writes after shutdown = %d, want 0", setCount)
 	}
-	if err := store.Shutdown(context.Background()); err != nil {
+	join, cancelJoin := context.WithTimeout(t.Context(), time.Second)
+	defer cancelJoin()
+	if err := store.Shutdown(join); err != nil {
 		t.Fatalf("Shutdown() after load completion = %v", err)
 	}
 }
