@@ -136,3 +136,19 @@ func TestFlightBudgetConfigurationBounds(t *testing.T) {
 		}
 	}
 }
+
+func TestFlightAdmissionIncludesDetachedCleanupWork(t *testing.T) {
+	store := newInternalLoadingCache(t, &internalMemoryBackend{})
+	store.load.MaxFlights = 1
+	// runLoad removes the finished map entry before finishLoad decrements the
+	// active count. Admission must honor the work still in that cleanup window.
+	store.loadMu.Lock()
+	store.activeLoads = 1
+	flight, err := store.admitFlightLocked("new", "new", nil, 1)
+	retained := len(store.flights)
+	store.activeLoads-- // Release only the simulated detached cleanup work.
+	store.loadMu.Unlock()
+	if !errors.Is(err, ErrFlightLimit) || flight != nil || retained != 0 {
+		t.Fatalf("cleanup-window admission = %v, %v, retained=%d", flight, err, retained)
+	}
+}

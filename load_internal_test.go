@@ -436,6 +436,107 @@ func TestFinishedFlightRemainsAttachedDuringExplicitMutation(t *testing.T) {
 	if err := <-explicitDone; err != nil {
 		t.Fatalf("explicit Set returned %v", err)
 	}
+	if _, err := store.GetOrLoad(t.Context(), "replacement-key", func(context.Context, string) (LoadResult[string], error) {
+		return LoadResult[string]{Value: "replacement", Found: true}, nil
+	}); err != nil {
+		t.Fatalf("released mutation reservation retained budget: %v", err)
+	}
+}
+
+func TestMutationReservationReleasePreservesFlightOwnership(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		finished bool
+		users    int
+		replaced bool
+		remove   bool
+	}{
+		{"unfinished", false, 1, false, false},
+		{"another reservation", true, 2, false, false},
+		{"replacement owns map", true, 1, true, false},
+		{"last finished reservation", true, 1, false, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			store := newInternalLoadingCache(t, &internalMemoryBackend{})
+			flight := &loadFlight[string]{finished: test.finished, mutationUsers: test.users}
+			mapped := flight
+			if test.replaced {
+				mapped = &loadFlight[string]{}
+			}
+			store.flights["key"] = mapped
+			flight.mutation.Lock()
+			store.unlockFlightMutation("key", flight)
+			if flight.mutationUsers != test.users-1 {
+				t.Fatalf("remaining reservations=%d", flight.mutationUsers)
+			}
+			got := store.flights["key"]
+			if test.remove && got != nil || !test.remove && got != mapped {
+				t.Fatal("reservation release violated flight map ownership")
+			}
+		})
+	}
+}
+
+func TestShutdownJoinsLastOfMultipleActiveLoads(t *testing.T) {
+	store := newInternalLoadingCache(t, &internalMemoryBackend{})
+	store.loadSlots = make(chan struct{}, 2)
+	firstReady, secondReady := make(chan struct{}), make(chan struct{})
+	firstRelease, secondRelease := make(chan struct{}), make(chan struct{})
+	var firstOnce, secondOnce sync.Once
+	defer firstOnce.Do(func() { close(firstRelease) })
+	defer secondOnce.Do(func() { close(secondRelease) })
+	start := func(key string, ready, release chan struct{}) <-chan error {
+		done := make(chan error, 1)
+		go func() {
+			_, err := store.GetOrLoad(t.Context(), key, func(context.Context, string) (LoadResult[string], error) {
+				close(ready)
+				<-release
+				return LoadResult[string]{Value: key, Found: true}, nil
+			})
+			done <- err
+		}()
+		return done
+	}
+	firstDone := start("first", firstReady, firstRelease)
+	secondDone := start("second", secondReady, secondRelease)
+	waitInternalSignal(t, firstReady)
+	waitInternalSignal(t, secondReady)
+	ctx, cancel := context.WithTimeout(t.Context(), 25*time.Millisecond)
+	defer cancel()
+	if err := store.Shutdown(ctx); !errors.Is(err, ErrShutdownIncomplete) {
+		t.Fatalf("active shutdown=%v", err)
+	}
+	firstOnce.Do(func() { close(firstRelease) })
+	if err := <-firstDone; !errors.Is(err, context.Canceled) {
+		t.Fatalf("first result=%v", err)
+	}
+	deadline := time.Now().Add(time.Second)
+	for {
+		store.loadMu.Lock()
+		active := store.activeLoads
+		store.loadMu.Unlock()
+		if active == 1 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("first load cleanup did not finish")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	select {
+	case <-store.loadsDone:
+		t.Fatal("shutdown completed with one load active")
+	default:
+	}
+	secondOnce.Do(func() { close(secondRelease) })
+	if err := <-secondDone; !errors.Is(err, context.Canceled) {
+		t.Fatalf("second result=%v", err)
+	}
+	join, cancelJoin := context.WithTimeout(t.Context(), time.Second)
+	defer cancelJoin()
+	if err := store.Shutdown(join); err != nil {
+		t.Fatalf("last-load shutdown=%v", err)
+	}
 }
 
 func waitForInternalMutationUsers(t *testing.T, store *Cache[string, string], logical string, want int) {

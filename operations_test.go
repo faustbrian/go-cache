@@ -505,6 +505,38 @@ func (*nilCodec) Decode([]byte) (string, error) { return "", nil }
 
 type nilClock struct{}
 
+type channelClock chan struct{}
+
+func (channelClock) Now() time.Time { return time.Now() }
+
+type functionClock func() time.Time
+
+func (clock functionClock) Now() time.Time { return clock() }
+
+type mapClock map[string]time.Time
+
+func (mapClock) Now() time.Time { return time.Now() }
+
+type sliceClock []time.Time
+
+func (sliceClock) Now() time.Time { return time.Now() }
+
+func TestConstructorRejectsEveryNilableClockRepresentation(t *testing.T) {
+	for name, clock := range map[string]cache.Clock{
+		"channel": channelClock(nil), "function": functionClock(nil),
+		"map": mapClock(nil), "slice": sliceClock(nil),
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := cache.New(cache.Config[string, string]{Backend: newRecordingBackend(),
+				Keys: mustStringKeySpace(t), Codec: cache.JSONCodec[string]{Version: 1},
+				TTL: cache.TTLPolicy{TTL: time.Minute}, Clock: clock, MaxValue: 1024})
+			if !errors.Is(err, cache.ErrInvalidConfig) {
+				t.Fatalf("nil %s clock=%v", name, err)
+			}
+		})
+	}
+}
+
 func (*nilClock) Now() time.Time { return time.Time{} }
 
 type nilJitter struct{}
