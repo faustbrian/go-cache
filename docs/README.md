@@ -19,6 +19,7 @@
 - [Observability](observability.md)
 - [Operations](operations.md)
 - [Performance](performance.md)
+- [Threat model and risk register](threat-model.md)
 
 ## Reference and maintenance
 

@@ -29,7 +29,7 @@ func (c JSONCodec[V]) Encode(value V) ([]byte, error) {
 	}
 	payload, err := json.Marshal(value)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrDecode, err)
+		return nil, NewError(DecodeError, OperationSet, err)
 	}
 	limit := c.sizeLimit()
 	if len(payload) >= limit {
@@ -60,7 +60,7 @@ func (c JSONCodec[V]) Decode(encoded []byte) (V, error) {
 	decoder.DisallowUnknownFields()
 	var value V
 	if err := decoder.Decode(&value); err != nil {
-		return zero, fmt.Errorf("%w: %w", ErrDecode, err)
+		return zero, NewError(DecodeError, OperationGet, err)
 	}
 	if err := decoder.Decode(&struct{}{}); err != io.EOF {
 		return zero, fmt.Errorf("%w: trailing data", ErrDecode)

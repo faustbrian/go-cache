@@ -10,21 +10,64 @@ import (
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/go-cache"
-	cachememory "github.com/faustbrian/go-cache/adapters/memory"
-	cacheotel "github.com/faustbrian/go-cache/adapters/otel"
-	cacheredis "github.com/faustbrian/go-cache/adapters/redis"
-	cacheservice "github.com/faustbrian/go-cache/adapters/service"
-	cacheslog "github.com/faustbrian/go-cache/adapters/slog"
-	cachevalkey "github.com/faustbrian/go-cache/adapters/valkey"
-	legacymemory "github.com/faustbrian/go-cache/backend/memory"   //nolint:staticcheck // Compatibility coverage requires the deprecated path.
-	legacyredis "github.com/faustbrian/go-cache/backend/redis"     //nolint:staticcheck // Compatibility coverage requires the deprecated path.
-	legacyvalkey "github.com/faustbrian/go-cache/backend/valkey"   //nolint:staticcheck // Compatibility coverage requires the deprecated path.
-	legacyservice "github.com/faustbrian/go-cache/cacheservice"    //nolint:staticcheck // Compatibility coverage requires the deprecated path.
-	legacyotel "github.com/faustbrian/go-cache/observability/otel" //nolint:staticcheck // Compatibility coverage requires the deprecated path.
-	legacyslog "github.com/faustbrian/go-cache/observability/slog" //nolint:staticcheck // Compatibility coverage requires the deprecated path.
+	cache "github.com/faustbrian/go-cache/v2"
+	cachememory "github.com/faustbrian/go-cache/v2/adapters/memory"
+	cacheotel "github.com/faustbrian/go-cache/v2/adapters/otel"
+	cacheredis "github.com/faustbrian/go-cache/v2/adapters/redis"
+	cacheservice "github.com/faustbrian/go-cache/v2/adapters/service"
+	cacheslog "github.com/faustbrian/go-cache/v2/adapters/slog"
+	cachevalkey "github.com/faustbrian/go-cache/v2/adapters/valkey"
+	legacymemory "github.com/faustbrian/go-cache/v2/backend/memory"   //nolint:staticcheck // Compatibility coverage requires the deprecated path.
+	legacyredis "github.com/faustbrian/go-cache/v2/backend/redis"     //nolint:staticcheck // Compatibility coverage requires the deprecated path.
+	legacyvalkey "github.com/faustbrian/go-cache/v2/backend/valkey"   //nolint:staticcheck // Compatibility coverage requires the deprecated path.
+	legacyservice "github.com/faustbrian/go-cache/v2/cacheservice"    //nolint:staticcheck // Compatibility coverage requires the deprecated path.
+	legacyotel "github.com/faustbrian/go-cache/v2/observability/otel" //nolint:staticcheck // Compatibility coverage requires the deprecated path.
+	legacyslog "github.com/faustbrian/go-cache/v2/observability/slog" //nolint:staticcheck // Compatibility coverage requires the deprecated path.
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 )
+
+type nilMeter struct{ metric.Meter }
+
+func TestAdapterConstructorsRejectTypedNilDependencies(t *testing.T) {
+	for name, construct := range map[string]func(cache.Clock, cache.Observer) error{
+		"canonical memory": func(clock cache.Clock, observer cache.Observer) error {
+			_, err := cachememory.New(cachememory.Config{MaxEntries: 1, MaxBytes: 128, Clock: clock, Observer: observer})
+			return err
+		},
+		"legacy memory": func(clock cache.Clock, observer cache.Observer) error {
+			_, err := legacymemory.New(legacymemory.Config{MaxEntries: 1, MaxBytes: 128, Clock: clock, Observer: observer})
+			return err
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := construct((*nilClock)(nil), nil); !errors.Is(err, cache.ErrInvalidConfig) {
+				t.Errorf("typed-nil clock error = %v, want ErrInvalidConfig", err)
+			}
+			if err := construct(cache.SystemClock{}, (*nilObserver)(nil)); !errors.Is(err, cache.ErrInvalidConfig) {
+				t.Errorf("typed-nil observer error = %v, want ErrInvalidConfig", err)
+			}
+			if err := construct(cache.SystemClock{}, nil); err != nil {
+				t.Errorf("absent optional observer error = %v", err)
+			}
+		})
+	}
+	for name, construct := range map[string]func(metric.Meter) error{
+		"canonical otel": func(meter metric.Meter) error { _, err := cacheotel.New(meter); return err },
+		"legacy otel":    func(meter metric.Meter) error { _, err := legacyotel.New(meter); return err },
+	} {
+		t.Run(name, func(t *testing.T) {
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					t.Errorf("typed-nil meter panicked")
+				}
+			}()
+			if err := construct((*nilMeter)(nil)); err == nil {
+				t.Error("typed-nil meter accepted")
+			}
+		})
+	}
+}
 
 func TestCanonicalAdaptersPreserveLegacyContracts(t *testing.T) {
 	t.Parallel()
@@ -77,40 +120,40 @@ func TestCanonicalAdaptersPreserveLegacyContracts(t *testing.T) {
 		got  reflect.Type
 		want string
 	}{
-		{"legacy memory Config", reflect.TypeOf(legacymemory.Config{}), "github.com/faustbrian/go-cache/backend/memory"},
-		{"legacy memory Stats", reflect.TypeOf(legacymemory.Stats{}), "github.com/faustbrian/go-cache/backend/memory"},
-		{"legacy memory Backend", reflect.TypeOf(legacymemory.Backend{}), "github.com/faustbrian/go-cache/backend/memory"},
-		{"canonical memory Config", reflect.TypeOf(cachememory.Config{}), "github.com/faustbrian/go-cache/adapters/memory"},
-		{"canonical memory Stats", reflect.TypeOf(cachememory.Stats{}), "github.com/faustbrian/go-cache/adapters/memory"},
-		{"canonical memory Backend", reflect.TypeOf(cachememory.Backend{}), "github.com/faustbrian/go-cache/adapters/memory"},
-		{"legacy Redis Config", reflect.TypeOf(legacyredis.Config{}), "github.com/faustbrian/go-cache/backend/redis"},
-		{"legacy Redis Backend", reflect.TypeOf(legacyredis.Backend{}), "github.com/faustbrian/go-cache/backend/redis"},
-		{"canonical Redis Config", reflect.TypeOf(cacheredis.Config{}), "github.com/faustbrian/go-cache/adapters/redis"},
-		{"canonical Redis Backend", reflect.TypeOf(cacheredis.Backend{}), "github.com/faustbrian/go-cache/adapters/redis"},
-		{"legacy Valkey Config", reflect.TypeOf(legacyvalkey.Config{}), "github.com/faustbrian/go-cache/backend/valkey"},
-		{"legacy Valkey Backend", reflect.TypeOf(legacyvalkey.Backend{}), "github.com/faustbrian/go-cache/backend/valkey"},
-		{"canonical Valkey Config", reflect.TypeOf(cachevalkey.Config{}), "github.com/faustbrian/go-cache/adapters/valkey"},
-		{"canonical Valkey Backend", reflect.TypeOf(cachevalkey.Backend{}), "github.com/faustbrian/go-cache/adapters/valkey"},
-		{"legacy service Startup", reflect.TypeOf((legacyservice.Startup[int])(nil)), "github.com/faustbrian/go-cache/cacheservice"},
-		{"legacy service Check", reflect.TypeOf((legacyservice.Check[int])(nil)), "github.com/faustbrian/go-cache/cacheservice"},
-		{"legacy service Shutdown", reflect.TypeOf((legacyservice.Shutdown[int])(nil)), "github.com/faustbrian/go-cache/cacheservice"},
-		{"legacy service Options", reflect.TypeOf(legacyservice.Options[int]{}), "github.com/faustbrian/go-cache/cacheservice"},
-		{"legacy service OptionsError", reflect.TypeOf(legacyservice.OptionsError{}), "github.com/faustbrian/go-cache/cacheservice"},
-		{"legacy service StartupError", reflect.TypeOf(legacyservice.StartupError{}), "github.com/faustbrian/go-cache/cacheservice"},
-		{"legacy service Adapter", reflect.TypeOf(legacyservice.Adapter[int]{}), "github.com/faustbrian/go-cache/cacheservice"},
-		{"canonical service Startup", reflect.TypeOf((cacheservice.Startup[int])(nil)), "github.com/faustbrian/go-cache/adapters/service"},
-		{"canonical service Check", reflect.TypeOf((cacheservice.Check[int])(nil)), "github.com/faustbrian/go-cache/adapters/service"},
-		{"canonical service Shutdown", reflect.TypeOf((cacheservice.Shutdown[int])(nil)), "github.com/faustbrian/go-cache/adapters/service"},
-		{"canonical service Options", reflect.TypeOf(cacheservice.Options[int]{}), "github.com/faustbrian/go-cache/adapters/service"},
-		{"canonical service OptionsError", reflect.TypeOf(cacheservice.OptionsError{}), "github.com/faustbrian/go-cache/adapters/service"},
-		{"canonical service StartupError", reflect.TypeOf(cacheservice.StartupError{}), "github.com/faustbrian/go-cache/adapters/service"},
-		{"canonical service Adapter", reflect.TypeOf(cacheservice.Adapter[int]{}), "github.com/faustbrian/go-cache/adapters/service"},
-		{"legacy OTel Observer", reflect.TypeOf(legacyotel.Observer{}), "github.com/faustbrian/go-cache/observability/otel"},
-		{"canonical OTel Observer", reflect.TypeOf(cacheotel.Observer{}), "github.com/faustbrian/go-cache/adapters/otel"},
-		{"legacy slog Config", reflect.TypeOf(legacyslog.Config{}), "github.com/faustbrian/go-cache/observability/slog"},
-		{"legacy slog Observer", reflect.TypeOf(legacyslog.Observer{}), "github.com/faustbrian/go-cache/observability/slog"},
-		{"canonical slog Config", reflect.TypeOf(cacheslog.Config{}), "github.com/faustbrian/go-cache/adapters/slog"},
-		{"canonical slog Observer", reflect.TypeOf(cacheslog.Observer{}), "github.com/faustbrian/go-cache/adapters/slog"},
+		{"legacy memory Config", reflect.TypeOf(legacymemory.Config{}), "github.com/faustbrian/go-cache/v2/backend/memory"},
+		{"legacy memory Stats", reflect.TypeOf(legacymemory.Stats{}), "github.com/faustbrian/go-cache/v2/backend/memory"},
+		{"legacy memory Backend", reflect.TypeOf(legacymemory.Backend{}), "github.com/faustbrian/go-cache/v2/backend/memory"},
+		{"canonical memory Config", reflect.TypeOf(cachememory.Config{}), "github.com/faustbrian/go-cache/v2/adapters/memory"},
+		{"canonical memory Stats", reflect.TypeOf(cachememory.Stats{}), "github.com/faustbrian/go-cache/v2/adapters/memory"},
+		{"canonical memory Backend", reflect.TypeOf(cachememory.Backend{}), "github.com/faustbrian/go-cache/v2/adapters/memory"},
+		{"legacy Redis Config", reflect.TypeOf(legacyredis.Config{}), "github.com/faustbrian/go-cache/v2/backend/redis"},
+		{"legacy Redis Backend", reflect.TypeOf(legacyredis.Backend{}), "github.com/faustbrian/go-cache/v2/backend/redis"},
+		{"canonical Redis Config", reflect.TypeOf(cacheredis.Config{}), "github.com/faustbrian/go-cache/v2/adapters/redis"},
+		{"canonical Redis Backend", reflect.TypeOf(cacheredis.Backend{}), "github.com/faustbrian/go-cache/v2/adapters/redis"},
+		{"legacy Valkey Config", reflect.TypeOf(legacyvalkey.Config{}), "github.com/faustbrian/go-cache/v2/backend/valkey"},
+		{"legacy Valkey Backend", reflect.TypeOf(legacyvalkey.Backend{}), "github.com/faustbrian/go-cache/v2/backend/valkey"},
+		{"canonical Valkey Config", reflect.TypeOf(cachevalkey.Config{}), "github.com/faustbrian/go-cache/v2/adapters/valkey"},
+		{"canonical Valkey Backend", reflect.TypeOf(cachevalkey.Backend{}), "github.com/faustbrian/go-cache/v2/adapters/valkey"},
+		{"legacy service Startup", reflect.TypeOf((legacyservice.Startup[int])(nil)), "github.com/faustbrian/go-cache/v2/cacheservice"},
+		{"legacy service Check", reflect.TypeOf((legacyservice.Check[int])(nil)), "github.com/faustbrian/go-cache/v2/cacheservice"},
+		{"legacy service Shutdown", reflect.TypeOf((legacyservice.Shutdown[int])(nil)), "github.com/faustbrian/go-cache/v2/cacheservice"},
+		{"legacy service Options", reflect.TypeOf(legacyservice.Options[int]{}), "github.com/faustbrian/go-cache/v2/cacheservice"},
+		{"legacy service OptionsError", reflect.TypeOf(legacyservice.OptionsError{}), "github.com/faustbrian/go-cache/v2/cacheservice"},
+		{"legacy service StartupError", reflect.TypeOf(legacyservice.StartupError{}), "github.com/faustbrian/go-cache/v2/cacheservice"},
+		{"legacy service Adapter", reflect.TypeOf(legacyservice.Adapter[int]{}), "github.com/faustbrian/go-cache/v2/cacheservice"},
+		{"canonical service Startup", reflect.TypeOf((cacheservice.Startup[int])(nil)), "github.com/faustbrian/go-cache/v2/adapters/service"},
+		{"canonical service Check", reflect.TypeOf((cacheservice.Check[int])(nil)), "github.com/faustbrian/go-cache/v2/adapters/service"},
+		{"canonical service Shutdown", reflect.TypeOf((cacheservice.Shutdown[int])(nil)), "github.com/faustbrian/go-cache/v2/adapters/service"},
+		{"canonical service Options", reflect.TypeOf(cacheservice.Options[int]{}), "github.com/faustbrian/go-cache/v2/adapters/service"},
+		{"canonical service OptionsError", reflect.TypeOf(cacheservice.OptionsError{}), "github.com/faustbrian/go-cache/v2/adapters/service"},
+		{"canonical service StartupError", reflect.TypeOf(cacheservice.StartupError{}), "github.com/faustbrian/go-cache/v2/adapters/service"},
+		{"canonical service Adapter", reflect.TypeOf(cacheservice.Adapter[int]{}), "github.com/faustbrian/go-cache/v2/adapters/service"},
+		{"legacy OTel Observer", reflect.TypeOf(legacyotel.Observer{}), "github.com/faustbrian/go-cache/v2/observability/otel"},
+		{"canonical OTel Observer", reflect.TypeOf(cacheotel.Observer{}), "github.com/faustbrian/go-cache/v2/adapters/otel"},
+		{"legacy slog Config", reflect.TypeOf(legacyslog.Config{}), "github.com/faustbrian/go-cache/v2/observability/slog"},
+		{"legacy slog Observer", reflect.TypeOf(legacyslog.Observer{}), "github.com/faustbrian/go-cache/v2/observability/slog"},
+		{"canonical slog Config", reflect.TypeOf(cacheslog.Config{}), "github.com/faustbrian/go-cache/v2/adapters/slog"},
+		{"canonical slog Observer", reflect.TypeOf(cacheslog.Observer{}), "github.com/faustbrian/go-cache/v2/adapters/slog"},
 	} {
 		if got := identity.got.PkgPath(); got != identity.want {
 			t.Errorf("%s package = %q, want %q", identity.name, got, identity.want)

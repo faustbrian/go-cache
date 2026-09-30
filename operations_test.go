@@ -3,11 +3,12 @@ package cache_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/go-cache"
+	cache "github.com/faustbrian/go-cache/v2"
 )
 
 func TestGetDistinguishesMissHitStaleDecodeAndBackendFailure(t *testing.T) {
@@ -56,6 +57,98 @@ func TestGetDistinguishesMissHitStaleDecodeAndBackendFailure(t *testing.T) {
 	_, err = store.Get(context.Background(), "anything")
 	if !errors.Is(err, cache.ErrBackend) || errors.Is(err, cache.ErrMiss) {
 		t.Fatalf("backend failure must remain distinct from miss: %v", err)
+	}
+}
+
+func TestCacheRedactsBackendAndCodecDiagnostics(t *testing.T) {
+	t.Parallel()
+
+	const sensitive = "redis://username:credential@cache.internal/private-key"
+	cause := &sensitiveCause{message: sensitive}
+	backend := newRecordingBackend()
+	backend.getErr = cause
+	store := newStringCache(t, backend, fixedClock{now: time.Now()}, cache.TTLPolicy{TTL: time.Minute})
+
+	_, err := store.Get(context.Background(), "logical-key")
+	assertProtectedCause(t, err, cause, cache.ErrBackend, sensitive)
+
+	space := mustStringKeySpace(t)
+	codecStore, err := cache.New(cache.Config[string, string]{
+		Backend: backend, Keys: space, Codec: failingStringCodec{err: cause},
+		TTL: cache.TTLPolicy{TTL: time.Minute}, Clock: fixedClock{now: time.Now()}, MaxValue: 1024,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	backend.getErr = nil
+	if err := codecStore.Set(context.Background(), "logical-key", "private-value"); err == nil {
+		t.Fatal("Set returned nil for a codec failure")
+	} else {
+		assertProtectedCause(t, err, cause, cache.ErrDecode, sensitive)
+	}
+}
+
+func assertProtectedCause(t *testing.T, err, cause, classification error, sensitive string) {
+	t.Helper()
+	if !errors.Is(err, classification) || !errors.Is(err, cause) {
+		t.Fatalf("error classification = %v, want %v and original identity", err, classification)
+	}
+	if strings.Contains(err.Error(), sensitive) {
+		t.Fatal("public error exposed a sensitive dependency diagnostic")
+	}
+	var exposed *sensitiveCause
+	if errors.As(err, &exposed) {
+		t.Fatal("errors.As exposed a sensitive dependency cause")
+	}
+	var classified *cache.Error
+	if !errors.As(err, &classified) {
+		t.Fatalf("error = %T, want *cache.Error", err)
+	}
+	if errors.As(classified, &exposed) {
+		t.Fatal("Error exposed the concrete dependency cause")
+	}
+}
+
+type failingStringCodec struct{ err error }
+
+func (codec failingStringCodec) Encode(string) ([]byte, error) { return nil, codec.err }
+
+func (codec failingStringCodec) Decode([]byte) (string, error) { return "", codec.err }
+
+func TestProtectedErrorFormattingAndAbsentCause(t *testing.T) {
+	t.Parallel()
+	cause := &sensitiveCause{message: "private dependency diagnostic"}
+	err := cache.NewError(cache.LoaderError, cache.OperationLoad, cause)
+	for _, child := range err.Unwrap() {
+		if strings.Contains(child.Error(), cause.message) {
+			t.Fatal("unwrapped error formatting exposed dependency diagnostic")
+		}
+	}
+	if !errors.Is(err, cause) {
+		t.Fatal("protected cause lost identity")
+	}
+	withoutCause := cache.NewError(cache.BackendError, cache.OperationGet, nil)
+	if !errors.Is(withoutCause, cache.ErrBackend) || len(withoutCause.Unwrap()) != 1 {
+		t.Fatalf("absent cause changed classification: %v", withoutCause)
+	}
+}
+
+func TestCodecSizeFailureRemainsLimitClassified(t *testing.T) {
+	t.Parallel()
+	store, err := cache.New(cache.Config[string, string]{
+		Backend: newRecordingBackend(), Keys: mustStringKeySpace(t),
+		Codec: failingStringCodec{err: cache.ErrValueTooLarge},
+		TTL:   cache.TTLPolicy{TTL: time.Minute}, Clock: cache.SystemClock{}, MaxValue: 1024,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	err = store.Set(t.Context(), "key", "value")
+	var classified *cache.Error
+	if !errors.Is(err, cache.ErrValueTooLarge) || errors.Is(err, cache.ErrDecode) ||
+		!errors.As(err, &classified) || classified.Kind != cache.LimitError {
+		t.Fatalf("codec size error = %v, want limit classification", err)
 	}
 }
 
@@ -394,6 +487,65 @@ func (c fixedClock) Now() time.Time { return c.now }
 type mutableClock struct{ now time.Time }
 
 func (c *mutableClock) Now() time.Time { return c.now }
+
+type nilBackend struct{}
+
+func (*nilBackend) Get(context.Context, string) (cache.Record, bool, error) {
+	return cache.Record{}, false, nil
+}
+func (*nilBackend) Set(context.Context, string, cache.Record, cache.Condition) (bool, error) {
+	return false, nil
+}
+func (*nilBackend) Delete(context.Context, string) (bool, error) { return false, nil }
+
+type nilCodec struct{}
+
+func (*nilCodec) Encode(string) ([]byte, error) { return nil, nil }
+func (*nilCodec) Decode([]byte) (string, error) { return "", nil }
+
+type nilClock struct{}
+
+type channelClock chan struct{}
+
+func (channelClock) Now() time.Time { return time.Now() }
+
+type functionClock func() time.Time
+
+func (clock functionClock) Now() time.Time { return clock() }
+
+type mapClock map[string]time.Time
+
+func (mapClock) Now() time.Time { return time.Now() }
+
+type sliceClock []time.Time
+
+func (sliceClock) Now() time.Time { return time.Now() }
+
+func TestConstructorRejectsEveryNilableClockRepresentation(t *testing.T) {
+	for name, clock := range map[string]cache.Clock{
+		"channel": channelClock(nil), "function": functionClock(nil),
+		"map": mapClock(nil), "slice": sliceClock(nil),
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := cache.New(cache.Config[string, string]{Backend: newRecordingBackend(),
+				Keys: mustStringKeySpace(t), Codec: cache.JSONCodec[string]{Version: 1},
+				TTL: cache.TTLPolicy{TTL: time.Minute}, Clock: clock, MaxValue: 1024})
+			if !errors.Is(err, cache.ErrInvalidConfig) {
+				t.Fatalf("nil %s clock=%v", name, err)
+			}
+		})
+	}
+}
+
+func (*nilClock) Now() time.Time { return time.Time{} }
+
+type nilJitter struct{}
+
+func (*nilJitter) Duration(time.Duration) time.Duration { return 0 }
+
+type nilObserver struct{}
+
+func (*nilObserver) Observe(context.Context, cache.Event) error { return nil }
 
 type recordingBackend struct {
 	mu             sync.Mutex

@@ -2,13 +2,17 @@
 
 ## Supported versions
 
-Security fixes are provided for the latest released minor version. Before
-`v1.0.0`, only the latest prerelease line is supported.
+Security fixes are provided for the latest published stable major/minor line.
+Publication of a new stable major supersedes the previous major; breaking
+security fixes are not backported. Until v2 is published, v1 remains the latest
+published line. The v2.0.0 release candidate adds protected-error,
+bounded-shutdown and bounded-flight contracts; confirm public v2 resolution
+and follow `docs/migration.md` to adopt them.
 
 ## Reporting
 
 Do not open a public issue for a suspected vulnerability. Use GitHub's private
-security advisory flow for `faustbrian/cache`. Include affected versions,
+security advisory flow for `faustbrian/go-cache`. Include affected versions,
 impact, reproduction steps, and any suggested mitigation. Expect an initial
 acknowledgement within seven days.
 
@@ -21,6 +25,12 @@ credentials, and native-client configuration. Treat backend bytes as untrusted.
 The project enforces GO-SAFETY-1: production code contains no `unsafe`, cgo, or
 `go:linkname`. Keys and values are excluded from bundled telemetry. Hashed keys
 reduce accidental disclosure but are not an encryption mechanism.
+Backend, loader, key-encoder, and codec diagnostics are redacted from public
+error text and concrete `errors.As` traversal; stable `errors.Is` identities
+remain available for control flow.
+
+The versioned [threat model and risk register](docs/threat-model.md) records
+trust boundaries, mitigations, accepted residual risks, and review triggers.
 
 Use a unique logical key per tenant and semantic value type. Namespace/name
 prefixes are visible and must not contain tenant IDs, email addresses, tokens,

@@ -3,11 +3,12 @@ package cacheotel
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	cache "github.com/faustbrian/go-cache"
+	cache "github.com/faustbrian/go-cache/v2"
 )
 
 // Observer exports semantic cache events as OpenTelemetry metrics.
@@ -20,7 +21,7 @@ type Observer struct {
 
 // New constructs all instruments required by an Observer.
 func New(meter metric.Meter) (*Observer, error) {
-	if meter == nil {
+	if isNilDependency(meter) {
 		return nil, fmt.Errorf("OpenTelemetry observer requires a meter")
 	}
 	operations, err := meter.Int64Counter(
@@ -61,6 +62,22 @@ func New(meter metric.Meter) (*Observer, error) {
 		valueSize:  valueSize,
 		memorySize: memorySize,
 	}, nil
+}
+
+func isNilDependency(dependency any) bool {
+	if dependency == nil {
+		return true
+	}
+	value := reflect.ValueOf(dependency)
+	switch value.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return value.IsNil()
+	case reflect.Invalid, reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+		reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128,
+		reflect.Array, reflect.String, reflect.Struct, reflect.UnsafePointer:
+	}
+	return false
 }
 
 // Observe records one validated, low-cardinality cache event.

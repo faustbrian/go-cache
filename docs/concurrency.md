@@ -9,10 +9,20 @@ the cache again so a concurrent writer can satisfy it. Independent flights
 share a global semaphore capped by `MaxConcurrent`. Callers joining one flight
 are capped by `MaxWaitersPerKey`.
 
+Distinct-key flight admission is separately bounded by `MaxFlights` (default
+1024, maximum 65536). The budget includes queued loader goroutines and finished
+flights retained by explicit mutations. Excess new keys return `ErrFlightLimit`
+before flight allocation or spawning; existing-key followers can still join
+within `MaxWaitersPerKey`. `MaxConcurrent` cannot exceed `MaxFlights` or 65536.
+Caller cancellation detaches a waiter but does not release a live flight's
+budget; actual flight completion and mutation cleanup do. Stale refreshes use
+the same budget and return the existing stale value with the rejection error.
+
 Each caller waits with its own context. Cancellation detaches only that waiter.
 The loader receives a cache-owned context so one impatient caller cannot cancel
 work needed by others. `Close` cancels that shared context, prevents new
-flights, waits for active goroutines, and is idempotent.
+flights, waits up to five seconds for active goroutines, and is idempotent.
+`Shutdown` accepts a caller-owned context when another deadline is required.
 
 Loader panics are recovered, classified as `ErrLoaderPanic`, and cannot poison
 the flight map. Source errors match `ErrLoader`; they are never converted into
@@ -38,7 +48,16 @@ reads therefore start one background refresh per key. Stale-if-error waits on
 the same foreground flight and returns the stale value plus the refresh error.
 
 Applications must make loaders context-aware and must bound their own network
-clients. A loader that ignores cancellation can delay `Close` indefinitely.
+clients. A loader that ignores cancellation may outlive shutdown, but the cache
+rejects new loads after closure. `Close` returns `ErrShutdownIncomplete` after
+five seconds; `Shutdown` returns it when the supplied context ends.
+
+Cancellation is checked before load publication, but is not an atomic storage
+commit barrier. A publication already admitted before shutdown may call or
+complete a cancellation-ignoring backend after `ErrShutdownIncomplete` returns.
+Successful `Shutdown` waits for all active loads, including their publication.
+Use context-aware backend I/O and separately bounded native-client operations;
+do not interpret incomplete shutdown as proof that side effects have stopped.
 
 The global loader semaphore does not promise FIFO fairness. Independent keys
 make progress subject to Go scheduler and channel scheduling. A loader must not

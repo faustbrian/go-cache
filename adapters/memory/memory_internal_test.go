@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/go-cache"
+	cache "github.com/faustbrian/go-cache/v2"
 )
 
 func TestSetRejectsEmptyEvictionList(t *testing.T) {

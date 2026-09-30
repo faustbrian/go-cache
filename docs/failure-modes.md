@@ -27,9 +27,11 @@ value and failure signal.
   client's policy or bypass explicitly.
 - Corrupt record: matches `ErrBackend` and `ErrInvalidRecord`, or a decode/schema
   sentinel after structural validation.
-- Source unavailable: matches `ErrLoader` and preserves the cause.
+- Source unavailable: matches `ErrLoader` and preserves the source error's
+  `errors.Is` identity without exposing its concrete diagnostic.
 - Caller timeout: matches `context.DeadlineExceeded` directly.
 - Capacity or size limit: reject before unsafe retention/allocation.
 - Waiter saturation: return `ErrWaiterLimit`; shed load or increase a measured
   bound.
-- Shutdown: active loaders receive cancellation; new work returns `ErrClosed`.
+- Shutdown: active loaders receive cancellation; new work returns `ErrClosed`;
+  bounded cleanup expiration also matches `ErrShutdownIncomplete`.

@@ -16,6 +16,11 @@ migration notes. Starting with `v1`, SemVer applies to:
 - portable deadlines and their wall-clock interpretation;
 - metric names, units, and label sets.
 
+The immutable released-v1 API snapshot is retained at
+`api/v1-baseline.txt`. The active v2 release candidate is checked against
+`api/v2-baseline.txt`; the baselines are intentionally independent because v2
+contains documented incompatible contracts.
+
 Adding a method to an exported interface is breaking. Changing a miss into an
 error (or an error into a miss), changing key output, accepting previously
 rejected ambiguous policy, or changing stored bytes incompatibly requires a

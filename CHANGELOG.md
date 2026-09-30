@@ -5,11 +5,32 @@ Versioning and keeps an Unreleased section at the top.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-09-30
+
 ### Added
 
 - Add canonical memory, Redis, Valkey, service-lifecycle, OpenTelemetry, and
   slog integrations under `adapters/*` without changing their runtime
   contracts.
+- Add `Shutdown(ctx)` for caller-bounded loader cleanup and publish a versioned
+  repository threat model and risk register.
+
+### Fixed
+
+- Reject excess distinct-key foreground and stale-refresh flights before
+  allocation or goroutine creation. `LoadPolicy.MaxFlights` defaults to 1024,
+  includes queued and mutation-retained work, and is bounded to 65536;
+  excess new keys return `ErrFlightLimit` without disclosing the key.
+- Redact recovered loader panic values while retaining `ErrLoaderPanic`
+  classification.
+- Redact backend, loader, key-encoder, and codec diagnostics from public error
+  text and `errors.As` while retaining stable `errors.Is` identities. Code that
+  inspected concrete dependency errors must move diagnostics to the trusted
+  dependency boundary.
+- Bound `Close` so a cancellation-ignoring loader cannot block shutdown
+  indefinitely.
+- Keep completed load flights attached while an explicit mutation holds their
+  publication lock, so a replacement loader cannot overwrite that mutation.
 
 ### Deprecated
 
@@ -19,6 +40,21 @@ Versioning and keeps an Unreleased section at the top.
   backend behavior during the documented migration interval.
 
 ### Changed
+
+- Bound `MaxConcurrent` to 65536 and require it not to exceed `MaxFlights`.
+  Existing-key coalescing and per-key waiter limits remain independent.
+- Move these intentional stable-contract changes to the
+  `github.com/faustbrian/go-cache/v2` module path. After v2 is published,
+  consumers must update all root and subpackage imports; v1 remains on its
+  existing behavior.
+- Reject typed-nil backend, codec, clock, jitter, observer, key-encoder, meter,
+  Redis and Valkey dependencies during construction instead of allowing later
+  panics. `Shutdown(nil)` now returns `ErrInvalidConfig`.
+- Remove public `Error.Cause`; use `errors.Is` for protected source identity and
+  capture full dependency diagnostics only at a trusted dependency boundary.
+- Recheck shutdown cancellation before load-publication admission. Successful
+  shutdown joins all active loads; an incomplete shutdown can be followed by
+  late publication from an already-admitted, cancellation-ignoring backend.
 
 - Adopt the checksum-verified `go-library-tools` v1.4.0 CLI, schema-v2
   cohesion contract, and local `make cohesion` gate without changing cache
@@ -144,5 +180,6 @@ Versioning and keeps an Unreleased section at the top.
 - Keep backend conformance failure messages compatible with standard Go error
   style so strict static analysis remains clean for downstream test suites.
 
-[Unreleased]: https://github.com/faustbrian/go-cache/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/faustbrian/go-cache/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/faustbrian/go-cache/releases/tag/v2.0.0
 [1.0.0]: https://github.com/faustbrian/go-cache/releases/tag/v1.0.0

@@ -36,7 +36,7 @@ func NewKeySpace[K any](
 	encoder KeyEncoder[K],
 	maxKeySize int,
 ) (KeySpace[K], error) {
-	if !validKeyPart(namespace) || !validKeyPart(name) || version == 0 || encoder == nil || maxKeySize <= 0 {
+	if !validKeyPart(namespace) || !validKeyPart(name) || version == 0 || isNilDependency(encoder) || maxKeySize <= 0 {
 		return KeySpace[K]{}, ErrInvalidKey
 	}
 	return KeySpace[K]{
@@ -52,7 +52,7 @@ func (s KeySpace[K]) Key(logical K) (string, error) {
 	switch err {
 	case nil:
 	default:
-		return "", fmt.Errorf("%w: %w", ErrInvalidKey, err)
+		return "", NewError(InvalidKeyError, Operation("key"), err)
 	}
 	digest := sha256.Sum256(encoded)
 	key := s.prefix + base64.RawURLEncoding.EncodeToString(digest[:])

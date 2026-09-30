@@ -11,7 +11,8 @@ defaults. Negative limits, contradictory stale policies, and jitter at or above
 the positive TTL are rejected.
 
 Construction errors match `ErrInvalidConfig`, `ErrInvalidTTL`, or
-`ErrInvalidPolicy`.
+`ErrInvalidPolicy`. Required interface dependencies and configured optional
+interfaces reject both nil and typed-nil values.
 
 ## Results
 
@@ -59,11 +60,20 @@ renew, or release leases.
 per backend key. The loader returns `LoadResult[V]{Found:false}` for an
 authoritative absence. A loader error is not absence and matches `ErrLoader`.
 
-Flights are bounded globally by `MaxConcurrent` and per key by
+Flights are bounded globally by `MaxFlights` (default 1024, maximum 65536);
+`MaxConcurrent` separately bounds executing loaders and cannot exceed that
+flight budget. New distinct-key work beyond the budget returns `ErrFlightLimit`
+before allocation or spawning. Existing-key followers are bounded by
 `MaxWaitersPerKey`. Caller cancellation detaches that caller; it does not cancel
 a load still needed by other callers. `Close` cancels the shared load context,
-waits for all flight cleanup, and makes subsequent operations return
-`ErrClosed`.
+waits up to five seconds for flight cleanup, and makes subsequent operations
+return `ErrClosed`. `Shutdown(ctx)` uses the caller's bound. Either returns
+`ErrShutdownIncomplete` if loader cleanup remains when its bound ends.
+An incomplete shutdown may be followed by late backend publication from
+already-admitted work if trusted callbacks or the backend ignore cancellation.
+A successful `Shutdown` joins all active loads and their publication.
+Passing nil to `Shutdown` returns `ErrInvalidConfig` without changing cache
+state.
 
 Successful same-instance mutations supersede an active load for that key, so a
 load cannot overwrite a `Set` or resurrect a `Delete`. Loaders must use their
@@ -97,12 +107,19 @@ Use `errors.Is`, not string matching. Important sentinels are:
 - `ErrInvalidKey`, `ErrKeyTooLarge`, and `ErrValueTooLarge`;
 - `ErrInvalidTTL`, `ErrInvalidPolicy`, `ErrInvalidConfig`, and
   `ErrInvalidRecord`;
-- `ErrLoader`, `ErrLoaderPanic`, `ErrRecursiveLoad`, and `ErrWaiterLimit`;
-- `ErrCapacity`, `ErrBatchTooLarge`, and `ErrClosed`.
+- `ErrLoader`, `ErrLoaderPanic`, `ErrRecursiveLoad`, `ErrWaiterLimit`, and
+  `ErrFlightLimit`;
+- `ErrCapacity`, `ErrBatchTooLarge`, `ErrClosed`, and
+  `ErrShutdownIncomplete`;
 - `ErrOwnershipLost` and `ErrOwnershipUnsupported`.
 
-`Error` also exposes `Kind`, `Operation`, and the original cause. Context
-cancellation and deadlines are returned directly so `errors.Is` remains useful.
+`Error` exposes `Kind` and `Operation`; its protected source cause is not a
+public field.
+Public formatting and `errors.As` do not expose concrete backend, loader,
+key-encoder, or codec diagnostics. `errors.Is` still recognizes their identity
+and the stable cache sentinel. Context cancellation and deadlines are returned
+directly. Construct classified errors with `NewError` so dependency causes use
+the same protection.
 
 ## Observers
 
