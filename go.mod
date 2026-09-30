@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	github.com/faustbrian/go-service v1.0.0
 	github.com/moby/moby/client v0.4.0
-	github.com/redis/go-redis/v9 v9.21.0
+	github.com/redis/go-redis/v9 v9.22.0
 	github.com/testcontainers/testcontainers-go v0.43.0
 	github.com/valkey-io/valkey-go v1.0.76
 	github.com/valkey-io/valkey-go/mock v1.0.76
