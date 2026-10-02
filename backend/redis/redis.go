@@ -5,8 +5,8 @@ import (
 
 	redisclient "github.com/redis/go-redis/v9"
 
-	cache "github.com/faustbrian/go-cache"
-	cacheredis "github.com/faustbrian/go-cache/adapters/redis"
+	cache "github.com/faustbrian/go-cache/v2"
+	cacheredis "github.com/faustbrian/go-cache/v2/adapters/redis"
 )
 
 // Config supplies the native client, clock, and maximum wire record size.

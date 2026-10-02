@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/go-cache"
-	slogobserver "github.com/faustbrian/go-cache/observability/slog"
+	cache "github.com/faustbrian/go-cache/v2"
+	slogobserver "github.com/faustbrian/go-cache/v2/observability/slog"
 )
 
 func TestObserverLogsOnlyFixedRedactedAttributesByDefault(t *testing.T) {

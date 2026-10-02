@@ -12,8 +12,8 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
-	cache "github.com/faustbrian/go-cache"
-	otelobserver "github.com/faustbrian/go-cache/observability/otel"
+	cache "github.com/faustbrian/go-cache/v2"
+	otelobserver "github.com/faustbrian/go-cache/v2/observability/otel"
 )
 
 func TestObserverRecordsRedactedLowCardinalityMetrics(t *testing.T) {

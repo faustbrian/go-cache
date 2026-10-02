@@ -40,8 +40,10 @@ memory and latency impact.
 ## Slow shutdown
 
 Loaders must select on their supplied context and native clients need bounded
-timeouts. `Close` waits for loader cleanup so it cannot safely abandon a
-goroutine that may still write shared state.
+timeouts. Prefer `Shutdown(ctx)` with the service deadline. `Close` waits for up
+to five seconds. Either returns `ErrShutdownIncomplete` if application loader
+code remains active; the cache stays closed, but Go cannot safely terminate the
+uncooperative goroutine.
 
 ## Integration tests do not start
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -200,4 +201,411 @@ func (b *internalMemoryBackend) Delete(ctx context.Context, key string) (bool, e
 	_, found := b.records[key]
 	delete(b.records, key)
 	return found, nil
+}
+
+func TestShutdownDuringPublicationWaitPreventsLateWrite(t *testing.T) {
+	tests := map[string]LoadResult[string]{
+		"positive": {Value: "late", Found: true},
+		"negative": {Found: false},
+	}
+	for name, loaded := range tests {
+		t.Run(name, func(t *testing.T) {
+			backend := &publicationBackend{}
+			space, err := NewKeySpace("test", "publication", 1, StringKeyEncoder{}, 128)
+			if err != nil {
+				t.Fatal(err)
+			}
+			store, err := New(Config[string, string]{
+				Backend: backend, Keys: space, Codec: JSONCodec[string]{Version: 1},
+				TTL: TTLPolicy{TTL: time.Minute}, Clock: SystemClock{}, MaxValue: 1024,
+				Load: LoadPolicy{NegativeTTL: time.Minute},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			loaderReady := make(chan struct{})
+			releaseLoader := make(chan struct{})
+			loadDone := make(chan error, 1)
+			go func() {
+				_, err := store.GetOrLoad(context.Background(), "key", func(context.Context, string) (LoadResult[string], error) {
+					close(loaderReady)
+					<-releaseLoader
+					return loaded, nil
+				})
+				loadDone <- err
+			}()
+			<-loaderReady
+
+			key, err := space.Key("key")
+			if err != nil {
+				t.Fatal(err)
+			}
+			store.loadMu.Lock()
+			flight := store.flights[key]
+			if flight == nil {
+				store.loadMu.Unlock()
+				t.Fatal("active flight not registered")
+			}
+			flight.mutation.Lock()
+			store.loadMu.Unlock()
+
+			publicationReached := make(chan struct{})
+			publicationRelease := make(chan struct{})
+			store.beforeLoadPublication = func() {
+				close(publicationReached)
+				<-publicationRelease
+			}
+			close(releaseLoader)
+			<-publicationReached
+			close(publicationRelease)
+
+			ctx, cancel := context.WithTimeout(context.Background(), 25*time.Millisecond)
+			defer cancel()
+			if err := store.Shutdown(ctx); !errors.Is(err, ErrShutdownIncomplete) {
+				flight.mutation.Unlock()
+				t.Fatalf("Shutdown() error = %v, want ErrShutdownIncomplete", err)
+			}
+			flight.mutation.Unlock()
+			if err := <-loadDone; !errors.Is(err, context.Canceled) {
+				t.Fatalf("GetOrLoad() error = %v, want context cancellation", err)
+			}
+			if backend.writes() != 0 {
+				t.Fatalf("backend writes after shutdown = %d, want 0", backend.writes())
+			}
+		})
+	}
+}
+
+type publicationBackend struct {
+	mu       sync.Mutex
+	setCount int
+}
+
+// These barriers pause trusted callbacks after runLoad's cancellation check,
+// before the actual backend call, without adding another production seam.
+type publicationCodec struct {
+	JSONCodec[string]
+	reached chan struct{}
+	release chan struct{}
+}
+
+func (codec publicationCodec) Encode(value string) ([]byte, error) {
+	close(codec.reached)
+	<-codec.release
+	return codec.JSONCodec.Encode(value)
+}
+
+type publicationClock struct {
+	armed   atomic.Bool
+	reached chan struct{}
+	release chan struct{}
+}
+
+func (clock *publicationClock) Now() time.Time {
+	if clock.armed.Swap(false) {
+		close(clock.reached)
+		<-clock.release
+	}
+	return time.Now()
+}
+
+func TestIncompleteShutdownPermitsAdmittedBackendPublication(t *testing.T) {
+	for _, found := range []bool{true, false} {
+		name := "negative"
+		if found {
+			name = "positive"
+		}
+		t.Run(name, func(t *testing.T) {
+			backend := &publicationBackend{} // Deliberately ignores context.
+			store := newInternalLoadingCache(t, backend)
+			store.load.NegativeTTL = time.Minute
+			reached, release := make(chan struct{}), make(chan struct{})
+			var releaseOnce sync.Once
+			defer releaseOnce.Do(func() { close(release) })
+			if found {
+				store.codec = publicationCodec{JSONCodec: JSONCodec[string]{Version: 1}, reached: reached, release: release}
+			} else {
+				clock := &publicationClock{reached: reached, release: release}
+				store.clock = clock
+				store.beforeLoadPublication = func() { clock.armed.Store(true) }
+			}
+			done := make(chan error, 1)
+			go func() {
+				_, err := store.GetOrLoad(t.Context(), "key", func(context.Context, string) (LoadResult[string], error) {
+					return LoadResult[string]{Value: "late", Found: found}, nil
+				})
+				done <- err
+			}()
+			waitInternalSignal(t, reached)
+			ctx, cancel := context.WithTimeout(t.Context(), 25*time.Millisecond)
+			defer cancel()
+			if err := store.Shutdown(ctx); !errors.Is(err, ErrShutdownIncomplete) || !errors.Is(err, context.DeadlineExceeded) {
+				t.Fatalf("blocked publication shutdown = %v, want incomplete deadline", err)
+			}
+			if backend.writes() != 0 {
+				t.Fatal("backend wrote before callback release")
+			}
+			releaseOnce.Do(func() { close(release) })
+			if err := <-done; err != nil {
+				t.Fatalf("admitted publication = %v", err)
+			}
+			if backend.writes() != 1 {
+				t.Fatalf("late writes = %d, want 1", backend.writes())
+			}
+			join, cancelJoin := context.WithTimeout(t.Context(), time.Second)
+			defer cancelJoin()
+			if err := store.Shutdown(join); err != nil {
+				t.Fatalf("completed shutdown = %v", err)
+			}
+		})
+	}
+}
+
+func (*publicationBackend) Get(context.Context, string) (Record, bool, error) {
+	return Record{}, false, nil
+}
+
+func (backend *publicationBackend) Set(context.Context, string, Record, Condition) (bool, error) {
+	backend.mu.Lock()
+	defer backend.mu.Unlock()
+	backend.setCount++
+	return true, nil
+}
+
+func (*publicationBackend) Delete(context.Context, string) (bool, error) { return false, nil }
+
+func (backend *publicationBackend) writes() int {
+	backend.mu.Lock()
+	defer backend.mu.Unlock()
+	return backend.setCount
+}
+
+func TestFinishedFlightRemainsAttachedDuringExplicitMutation(t *testing.T) {
+	backend := newSupersessionBackend()
+	store := newInternalLoadingCache(t, backend)
+	store.load.MaxFlights = 1
+
+	firstLoadDone := make(chan error, 1)
+	go func() {
+		_, err := store.GetOrLoad(t.Context(), "key", func(context.Context, string) (LoadResult[string], error) {
+			return LoadResult[string]{Value: "old", Found: true}, nil
+		})
+		firstLoadDone <- err
+	}()
+	waitInternalSignal(t, backend.firstSetReached)
+
+	explicitDone := make(chan error, 1)
+	go func() { explicitDone <- store.Set(t.Context(), "key", "explicit") }()
+	waitForInternalMutationUsers(t, store, "key", 1)
+	close(backend.releaseFirstSet)
+	waitInternalSignal(t, backend.explicitSetReached)
+	if err := <-firstLoadDone; err != nil {
+		close(backend.releaseExplicitSet)
+		t.Fatalf("first load returned %v", err)
+	}
+	if _, err := store.GetOrLoad(t.Context(), "other-key", func(context.Context, string) (LoadResult[string], error) {
+		t.Error("mutation-reserved flight allowed a distinct loader")
+		return LoadResult[string]{}, nil
+	}); !errors.Is(err, ErrFlightLimit) {
+		close(backend.releaseExplicitSet)
+		t.Fatalf("mutation-reserved budget: %v", err)
+	}
+
+	var secondLoaderCalls int
+	secondLoadDone := make(chan error, 1)
+	go func() {
+		_, err := store.GetOrLoad(t.Context(), "key", func(context.Context, string) (LoadResult[string], error) {
+			secondLoaderCalls++
+			return LoadResult[string]{Value: "late", Found: true}, nil
+		})
+		secondLoadDone <- err
+	}()
+	if err := <-secondLoadDone; err != nil {
+		close(backend.releaseExplicitSet)
+		t.Fatalf("second load returned %v", err)
+	}
+	if secondLoaderCalls != 0 {
+		close(backend.releaseExplicitSet)
+		t.Fatalf("new loader admitted while explicit mutation held finished flight: calls=%d", secondLoaderCalls)
+	}
+	if backend.count() != 2 {
+		close(backend.releaseExplicitSet)
+		t.Fatalf("writes before explicit mutation release = %d, want 2", backend.count())
+	}
+
+	close(backend.releaseExplicitSet)
+	if err := <-explicitDone; err != nil {
+		t.Fatalf("explicit Set returned %v", err)
+	}
+	if _, err := store.GetOrLoad(t.Context(), "replacement-key", func(context.Context, string) (LoadResult[string], error) {
+		return LoadResult[string]{Value: "replacement", Found: true}, nil
+	}); err != nil {
+		t.Fatalf("released mutation reservation retained budget: %v", err)
+	}
+}
+
+func TestMutationReservationReleasePreservesFlightOwnership(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		finished bool
+		users    int
+		replaced bool
+		remove   bool
+	}{
+		{"unfinished", false, 1, false, false},
+		{"another reservation", true, 2, false, false},
+		{"replacement owns map", true, 1, true, false},
+		{"last finished reservation", true, 1, false, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			store := newInternalLoadingCache(t, &internalMemoryBackend{})
+			flight := &loadFlight[string]{finished: test.finished, mutationUsers: test.users}
+			mapped := flight
+			if test.replaced {
+				mapped = &loadFlight[string]{}
+			}
+			store.flights["key"] = mapped
+			flight.mutation.Lock()
+			store.unlockFlightMutation("key", flight)
+			if flight.mutationUsers != test.users-1 {
+				t.Fatalf("remaining reservations=%d", flight.mutationUsers)
+			}
+			got := store.flights["key"]
+			if test.remove && got != nil || !test.remove && got != mapped {
+				t.Fatal("reservation release violated flight map ownership")
+			}
+		})
+	}
+}
+
+func TestShutdownJoinsLastOfMultipleActiveLoads(t *testing.T) {
+	store := newInternalLoadingCache(t, &internalMemoryBackend{})
+	store.loadSlots = make(chan struct{}, 2)
+	firstReady, secondReady := make(chan struct{}), make(chan struct{})
+	firstRelease, secondRelease := make(chan struct{}), make(chan struct{})
+	var firstOnce, secondOnce sync.Once
+	defer firstOnce.Do(func() { close(firstRelease) })
+	defer secondOnce.Do(func() { close(secondRelease) })
+	start := func(key string, ready, release chan struct{}) <-chan error {
+		done := make(chan error, 1)
+		go func() {
+			_, err := store.GetOrLoad(t.Context(), key, func(context.Context, string) (LoadResult[string], error) {
+				close(ready)
+				<-release
+				return LoadResult[string]{Value: key, Found: true}, nil
+			})
+			done <- err
+		}()
+		return done
+	}
+	firstDone := start("first", firstReady, firstRelease)
+	secondDone := start("second", secondReady, secondRelease)
+	waitInternalSignal(t, firstReady)
+	waitInternalSignal(t, secondReady)
+	ctx, cancel := context.WithTimeout(t.Context(), 25*time.Millisecond)
+	defer cancel()
+	if err := store.Shutdown(ctx); !errors.Is(err, ErrShutdownIncomplete) {
+		t.Fatalf("active shutdown=%v", err)
+	}
+	firstOnce.Do(func() { close(firstRelease) })
+	if err := <-firstDone; !errors.Is(err, context.Canceled) {
+		t.Fatalf("first result=%v", err)
+	}
+	deadline := time.Now().Add(time.Second)
+	for {
+		store.loadMu.Lock()
+		active := store.activeLoads
+		store.loadMu.Unlock()
+		if active == 1 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("first load cleanup did not finish")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	select {
+	case <-store.loadsDone:
+		t.Fatal("shutdown completed with one load active")
+	default:
+	}
+	secondOnce.Do(func() { close(secondRelease) })
+	if err := <-secondDone; !errors.Is(err, context.Canceled) {
+		t.Fatalf("second result=%v", err)
+	}
+	join, cancelJoin := context.WithTimeout(t.Context(), time.Second)
+	defer cancelJoin()
+	if err := store.Shutdown(join); err != nil {
+		t.Fatalf("last-load shutdown=%v", err)
+	}
+}
+
+func waitForInternalMutationUsers(t *testing.T, store *Cache[string, string], logical string, want int) {
+	t.Helper()
+	key, err := store.keys.Key(logical)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(time.Second)
+	for {
+		store.loadMu.Lock()
+		flight := store.flights[key]
+		got := 0
+		if flight != nil {
+			got = flight.mutationUsers
+		}
+		store.loadMu.Unlock()
+		if got == want {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("flight mutation users = %d, want %d", got, want)
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+type supersessionBackend struct {
+	mu                 sync.Mutex
+	setCount           int
+	firstSetReached    chan struct{}
+	releaseFirstSet    chan struct{}
+	explicitSetReached chan struct{}
+	releaseExplicitSet chan struct{}
+}
+
+func newSupersessionBackend() *supersessionBackend {
+	return &supersessionBackend{
+		firstSetReached: make(chan struct{}), releaseFirstSet: make(chan struct{}),
+		explicitSetReached: make(chan struct{}), releaseExplicitSet: make(chan struct{}),
+	}
+}
+
+func (*supersessionBackend) Get(context.Context, string) (Record, bool, error) {
+	return Record{}, false, nil
+}
+
+func (backend *supersessionBackend) Set(context.Context, string, Record, Condition) (bool, error) {
+	backend.mu.Lock()
+	backend.setCount++
+	count := backend.setCount
+	backend.mu.Unlock()
+	switch count {
+	case 1:
+		close(backend.firstSetReached)
+		<-backend.releaseFirstSet
+	case 2:
+		close(backend.explicitSetReached)
+		<-backend.releaseExplicitSet
+	}
+	return true, nil
+}
+
+func (*supersessionBackend) Delete(context.Context, string) (bool, error) { return false, nil }
+
+func (backend *supersessionBackend) count() int {
+	backend.mu.Lock()
+	defer backend.mu.Unlock()
+	return backend.setCount
 }

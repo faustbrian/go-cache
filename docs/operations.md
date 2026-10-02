@@ -71,13 +71,16 @@ addition to cache-level events.
 
 Stop accepting new work, then:
 
-1. call `Cache.Close` to cancel and join loaders;
+1. call `Cache.Shutdown` with the service shutdown context (or `Cache.Close`
+   for its five-second bound) to cancel and join loaders;
 2. close the memory backend if used;
 3. close the supplied Redis/Valkey client;
 4. flush and close telemetry exporters.
 
-A loader must honor its supplied context. `Close` intentionally waits rather
-than leaking a loader goroutine that could later write shared state.
+A loader must honor its supplied context. If the bound expires,
+`ErrShutdownIncomplete` reports that loader cleanup remains active. The cache
+stays closed and rejects new loads; the application must still bound the
+loader's own network and blocking operations.
 
 ## Alerts and runbooks
 

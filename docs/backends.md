@@ -19,7 +19,7 @@ backend, err := cachememory.New(cachememory.Config{
 })
 ```
 
-Import this adapter as `github.com/faustbrian/go-cache/adapters/memory`.
+Import this adapter as `github.com/faustbrian/go-cache/v2/adapters/memory`.
 
 It is process-local and makes no durability or cross-process consistency claim.
 
@@ -35,7 +35,7 @@ backend, err := cacheredis.New(cacheredis.Config{
 })
 ```
 
-Import this adapter as `github.com/faustbrian/go-cache/adapters/redis`.
+Import this adapter as `github.com/faustbrian/go-cache/v2/adapters/redis`.
 
 The adapter bounds reads server-side before retrieving bytes, stores one
 versioned record envelope, applies `NX`/`XX` atomically, and sets server expiry
@@ -56,7 +56,7 @@ backend, err := cachevalkey.New(cachevalkey.Config{
 })
 ```
 
-Import this adapter as `github.com/faustbrian/go-cache/adapters/valkey`.
+Import this adapter as `github.com/faustbrian/go-cache/v2/adapters/valkey`.
 
 The Valkey adapter uses valkey-go's command builder and binary-safe values. Its
 wire and conditional semantics match the Redis adapter, including the relative
@@ -74,8 +74,10 @@ expired.
 ## Ownership and shutdown
 
 The application owns native Redis and Valkey clients and closes them after the
-semantic cache. `Cache.Close` stops cache loaders; it does not close a supplied
-backend or network client. The memory backend has its own `Close` method.
+semantic cache. `Cache.Close` cancels cache loaders and waits for up to five
+seconds; `Cache.Shutdown(ctx)` uses the caller's deadline. Neither closes a
+supplied backend or network client. The memory backend has its own `Close`
+method.
 
 ## Supported integration matrix
 

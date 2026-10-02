@@ -4,13 +4,14 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"reflect"
 	"strings"
 	"time"
 
 	redisclient "github.com/redis/go-redis/v9"
 
-	cache "github.com/faustbrian/go-cache"
-	"github.com/faustbrian/go-cache/internal/wire"
+	cache "github.com/faustbrian/go-cache/v2"
+	"github.com/faustbrian/go-cache/v2/internal/wire"
 )
 
 const oversizedReply = "GOCACHE_RECORD_TOO_LARGE"
@@ -42,7 +43,7 @@ type Backend struct {
 
 // New validates config and constructs a Redis backend.
 func New(config Config) (*Backend, error) {
-	if config.Client == nil || config.Clock == nil || config.MaxRecordSize <= 0 {
+	if isNilDependency(config.Client) || isNilDependency(config.Clock) || config.MaxRecordSize <= 0 {
 		return nil, cache.ErrInvalidConfig
 	}
 	return &Backend{
@@ -50,6 +51,19 @@ func New(config Config) (*Backend, error) {
 		clock:         config.Clock,
 		maxRecordSize: config.MaxRecordSize,
 	}, nil
+}
+
+func isNilDependency(dependency any) bool {
+	if dependency == nil {
+		return true
+	}
+	value := reflect.ValueOf(dependency)
+	kind := value.Kind()
+	if kind == reflect.Chan || kind == reflect.Func || kind == reflect.Interface ||
+		kind == reflect.Map || kind == reflect.Pointer || kind == reflect.Slice {
+		return value.IsNil()
+	}
+	return false
 }
 
 // Get reads and validates one bounded wire record.
@@ -65,7 +79,7 @@ func (b *Backend) Get(ctx context.Context, key string) (cache.Record, bool, erro
 		if strings.Contains(err.Error(), oversizedReply) {
 			return cache.Record{}, false, cache.ErrValueTooLarge
 		}
-		return cache.Record{}, false, err
+		return cache.Record{}, false, cache.NewError(cache.BackendError, cache.OperationGet, err)
 	}
 	record, err := wire.Decode([]byte(value), b.maxRecordSize)
 	if err != nil {
@@ -102,7 +116,7 @@ func (b *Backend) Set(
 	}
 	mode, err := conditionMode(condition)
 	if err != nil {
-		return false, err
+		return false, cache.NewError(cache.PolicyError, cache.OperationSet, err)
 	}
 	_, err = b.client.SetArgs(ctx, key, encoded, redisclient.SetArgs{
 		Mode: mode,
@@ -112,7 +126,7 @@ func (b *Backend) Set(
 		return false, nil
 	}
 	if err != nil {
-		return false, err
+		return false, cache.NewError(cache.BackendError, cache.OperationSet, err)
 	}
 	return true, nil
 }
@@ -124,7 +138,7 @@ func (b *Backend) Delete(ctx context.Context, key string) (bool, error) {
 	}
 	deleted, err := b.client.Del(ctx, key).Result()
 	if err != nil {
-		return false, err
+		return false, cache.NewError(cache.BackendError, cache.OperationDelete, err)
 	}
 	return deleted > 0, nil
 }

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "repository": "github.com/faustbrian/go-cache",
+  "module": ".",
+  "package": "adapters/memory",
+  "gate": "mutation",
+  "input_digest": "sha256:73abd438a876768d38c7237b3ef10f6d5346b681d618c05af4625deba892600c",
+  "verifier_digest": "sha256:9a9499ff68a8dfd49a0be7995590297a8ee563a1aa226bfd8b9361dc53058108",
+  "result": "passed",
+  "report_digest": "sha256:652706c054158c5ef155b8f2ececfcf55b2f7675d0808557cd3ee0a1f682ade2",
+  "environment": {
+    "CGO_ENABLED": "1",
+    "GOARCH": "amd64",
+    "GOOS": "linux",
+    "GOVERSION": "go1.27.0",
+    "gremlins_binary_sha256": "sha256:c445d9c04ffe4d2070617fd4df511cb19e48135950462912be29133b1b0169cc"
+  },
+  "completed_at": "2026-09-30T06:03:17.74149052Z"
+}

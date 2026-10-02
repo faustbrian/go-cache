@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/go-cache"
+	cache "github.com/faustbrian/go-cache/v2"
 )
 
 func TestGetOrLoadCoalescesConcurrentCallersPerLogicalKey(t *testing.T) {
@@ -333,6 +334,164 @@ func TestGetOrLoadNegativeCachingAndPanicCleanup(t *testing.T) {
 	}
 }
 
+func TestGetOrLoadRedactsRecoveredPanicValue(t *testing.T) {
+	t.Parallel()
+
+	const sensitive = "customer-secret-loader-value"
+	store := newLoadingStringCache(t, newRecordingBackend(), fixedClock{now: time.Now()}, cache.LoadPolicy{})
+	_, err := store.GetOrLoad(context.Background(), "panic", func(context.Context, string) (cache.LoadResult[string], error) {
+		panic(sensitive)
+	})
+	if !errors.Is(err, cache.ErrLoaderPanic) {
+		t.Fatalf("GetOrLoad() error = %v, want ErrLoaderPanic", err)
+	}
+	if strings.Contains(err.Error(), sensitive) {
+		t.Fatal("GetOrLoad() exposed the recovered panic value")
+	}
+}
+
+func TestCloseReturnsWhenLoaderIgnoresCancellation(t *testing.T) {
+	t.Parallel()
+
+	space := mustStringKeySpace(t)
+	store, err := cache.New(cache.Config[string, string]{
+		Backend: newRecordingBackend(), Keys: space, Codec: cache.JSONCodec[string]{Version: 1},
+		TTL: cache.TTLPolicy{TTL: time.Minute}, Clock: fixedClock{now: time.Now()}, MaxValue: 1024,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	started := make(chan struct{})
+	release := make(chan struct{})
+	loadDone := make(chan error, 1)
+	go func() {
+		_, err := store.GetOrLoad(context.Background(), "key", func(context.Context, string) (cache.LoadResult[string], error) {
+			close(started)
+			<-release
+			return cache.LoadResult[string]{Value: "late", Found: true}, nil
+		})
+		loadDone <- err
+	}()
+	waitForSignal(t, started)
+
+	closeDone := make(chan error, 1)
+	go func() { closeDone <- store.Close() }()
+	select {
+	case err := <-closeDone:
+		if !errors.Is(err, cache.ErrShutdownIncomplete) || !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("Close() error does not classify incomplete deadline: %v", err)
+		}
+	case <-time.After(6 * time.Second):
+		close(release)
+		<-loadDone
+		<-closeDone
+		t.Fatal("Close() remained blocked on a loader that ignored cancellation")
+	}
+
+	close(release)
+	if err := <-loadDone; !errors.Is(err, context.Canceled) {
+		t.Fatalf("GetOrLoad() error = %v, want context cancellation", err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("Close() after load completion = %v", err)
+	}
+}
+
+func TestShutdownUsesCallerDeadline(t *testing.T) {
+	t.Parallel()
+
+	store := newLoadingStringCache(t, newRecordingBackend(), fixedClock{now: time.Now()}, cache.LoadPolicy{})
+	started := make(chan struct{})
+	release := make(chan struct{})
+	loadDone := make(chan error, 1)
+	go func() {
+		_, err := store.GetOrLoad(context.Background(), "key", func(context.Context, string) (cache.LoadResult[string], error) {
+			close(started)
+			<-release
+			return cache.LoadResult[string]{Value: "late", Found: true}, nil
+		})
+		loadDone <- err
+	}()
+	waitForSignal(t, started)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Millisecond)
+	defer cancel()
+	err := store.Shutdown(ctx)
+	if !errors.Is(err, cache.ErrShutdownIncomplete) || !errors.Is(err, context.DeadlineExceeded) {
+		close(release)
+		<-loadDone
+		t.Fatalf("Shutdown() error does not classify incomplete deadline: %v", err)
+	}
+
+	close(release)
+	if err := <-loadDone; !errors.Is(err, context.Canceled) {
+		t.Fatalf("GetOrLoad() error = %v, want context cancellation", err)
+	}
+	join, cancelJoin := context.WithTimeout(t.Context(), time.Second)
+	defer cancelJoin()
+	if err := store.Shutdown(join); err != nil {
+		t.Fatalf("Shutdown() after load completion = %v", err)
+	}
+}
+
+func TestShutdownRejectsNilContext(t *testing.T) {
+	t.Parallel()
+
+	store := newLoadingStringCache(t, newRecordingBackend(), fixedClock{now: time.Now()}, cache.LoadPolicy{})
+	var nilContext context.Context
+	err := store.Shutdown(nilContext)
+	if !errors.Is(err, cache.ErrInvalidConfig) {
+		t.Fatalf("Shutdown(nil) error = %v, want ErrInvalidConfig", err)
+	}
+	if errors.Is(err, context.Canceled) {
+		t.Fatalf("Shutdown(nil) fabricated context cancellation: %v", err)
+	}
+}
+
+func TestShutdownPreventsLateNegativeCacheWrite(t *testing.T) {
+	t.Parallel()
+
+	backend := &cancellationIgnoringBackend{recordingBackend: newRecordingBackend()}
+	store := newLoadingStringCache(t, backend, fixedClock{now: time.Now()}, cache.LoadPolicy{
+		NegativeTTL: time.Minute,
+	})
+	started := make(chan struct{})
+	release := make(chan struct{})
+	loadDone := make(chan error, 1)
+	go func() {
+		_, err := store.GetOrLoad(context.Background(), "key", func(context.Context, string) (cache.LoadResult[string], error) {
+			close(started)
+			<-release
+			return cache.LoadResult[string]{Found: false}, nil
+		})
+		loadDone <- err
+	}()
+	waitForSignal(t, started)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Millisecond)
+	defer cancel()
+	if err := store.Shutdown(ctx); !errors.Is(err, cache.ErrShutdownIncomplete) {
+		close(release)
+		<-loadDone
+		t.Fatalf("Shutdown() error = %v, want ErrShutdownIncomplete", err)
+	}
+	close(release)
+	if err := <-loadDone; !errors.Is(err, context.Canceled) {
+		t.Fatalf("GetOrLoad() error = %v, want context cancellation", err)
+	}
+	backend.mu.Lock()
+	setCount := backend.setCount
+	backend.mu.Unlock()
+	if setCount != 0 {
+		t.Fatalf("backend writes after shutdown = %d, want 0", setCount)
+	}
+	join, cancelJoin := context.WithTimeout(t.Context(), time.Second)
+	defer cancelJoin()
+	if err := store.Shutdown(join); err != nil {
+		t.Fatalf("Shutdown() after load completion = %v", err)
+	}
+}
+
 func TestGetOrLoadRejectsNilLoaderAndClassifiesLoadFailure(t *testing.T) {
 	t.Parallel()
 
@@ -340,11 +499,20 @@ func TestGetOrLoadRejectsNilLoaderAndClassifiesLoadFailure(t *testing.T) {
 	if _, err := store.GetOrLoad(context.Background(), "key", nil); !errors.Is(err, cache.ErrLoader) {
 		t.Fatalf("nil loader returned %v", err)
 	}
-	cause := errors.New("source unavailable")
+	const sensitive = "authorization=Bearer loader-secret"
+	cause := &sensitiveCause{message: sensitive}
 	if _, err := store.GetOrLoad(context.Background(), "key", func(context.Context, string) (cache.LoadResult[string], error) {
 		return cache.LoadResult[string]{}, cause
 	}); !errors.Is(err, cache.ErrLoader) || !errors.Is(err, cause) {
 		t.Fatalf("loader failure returned %v", err)
+	} else {
+		if strings.Contains(err.Error(), sensitive) {
+			t.Fatal("GetOrLoad exposed the loader diagnostic")
+		}
+		var exposed *sensitiveCause
+		if errors.As(err, &exposed) {
+			t.Fatal("errors.As exposed the loader cause")
+		}
 	}
 }
 
@@ -1029,6 +1197,17 @@ func newLoadingStringCache(t *testing.T, backend cache.Backend, clock cache.Cloc
 		t.Fatal(err)
 	}
 	return store
+}
+
+type cancellationIgnoringBackend struct{ *recordingBackend }
+
+func (backend *cancellationIgnoringBackend) Set(
+	_ context.Context,
+	key string,
+	record cache.Record,
+	condition cache.Condition,
+) (bool, error) {
+	return backend.recordingBackend.Set(context.Background(), key, record, condition)
 }
 
 func waitForSignal(t *testing.T, signal <-chan struct{}) {

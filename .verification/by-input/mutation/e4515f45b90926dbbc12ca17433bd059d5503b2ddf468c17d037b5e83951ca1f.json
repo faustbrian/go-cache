@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "repository": "github.com/faustbrian/go-cache",
+  "module": ".",
+  "package": "observability/otel",
+  "gate": "mutation",
+  "input_digest": "sha256:e4515f45b90926dbbc12ca17433bd059d5503b2ddf468c17d037b5e83951ca1f",
+  "verifier_digest": "sha256:9a9499ff68a8dfd49a0be7995590297a8ee563a1aa226bfd8b9361dc53058108",
+  "result": "passed",
+  "report_digest": "sha256:e26d1cee6919f0e387dfd99e80758ff9459691abb91bdc9a18980fff7cd634bf",
+  "environment": {
+    "CGO_ENABLED": "1",
+    "GOARCH": "amd64",
+    "GOOS": "linux",
+    "GOVERSION": "go1.27.0",
+    "gremlins_binary_sha256": "sha256:c445d9c04ffe4d2070617fd4df511cb19e48135950462912be29133b1b0169cc"
+  },
+  "completed_at": "2026-09-30T06:23:52.59527144Z"
+}
