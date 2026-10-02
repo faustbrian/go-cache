@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/go-cache/v2"
-	"github.com/faustbrian/go-cache/v2/backend/memory"
+	cache "github.com/faustbrian/go-cache/v3"
+	"github.com/faustbrian/go-cache/v3/backend/memory"
 )
 
 func FuzzBackendConformanceOperations(f *testing.F) {

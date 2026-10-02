@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/faustbrian/go-cache/v2/cacheservice"
+	"github.com/faustbrian/go-cache/v3/cacheservice"
 )
 
 func ExampleNew() {

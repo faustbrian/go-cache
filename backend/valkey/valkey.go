@@ -5,8 +5,8 @@ import (
 
 	valkeyclient "github.com/valkey-io/valkey-go"
 
-	cache "github.com/faustbrian/go-cache/v2"
-	cachevalkey "github.com/faustbrian/go-cache/v2/adapters/valkey"
+	cache "github.com/faustbrian/go-cache/v3"
+	cachevalkey "github.com/faustbrian/go-cache/v3/adapters/valkey"
 )
 
 // Config supplies the native client, clock, and maximum wire record size.

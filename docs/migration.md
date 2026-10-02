@@ -1,10 +1,50 @@
 # Migration guide
 
+## From v2 to v3
+
+Version 3 adopts go-redis v9.22.0. The root and every cache subpackage move
+from `github.com/faustbrian/go-cache/v2` to
+`github.com/faustbrian/go-cache/v3`. Wait until the v3 tag resolves from the
+public module proxy before changing production dependencies; no local
+`replace` directive is needed after publication.
+
+Both `adapters/redis.Config.Client` and `backend/redis.Config.Client` retain
+`redis.UniversalClient`. Its upstream method set now includes `AutoPipeline`,
+`AutoPipelineWithOptions`, `AsyncAutoPipeline`, and
+`AsyncAutoPipelineWithOptions`, as well as additional command methods.
+Native v9.22 clients satisfy the new contract. Custom clients must implement
+all methods in the v9.22 interface; compiling against an older SDK is not
+sufficient. Values read from either configuration field remain assignable
+back to the SDK interface. The deprecated Redis facade remains supported.
+
+Review application-owned client options: default read/write timeouts change
+from three to five seconds, derived pool timeout from four to six seconds,
+and retry delays from 8–512 milliseconds to 10 milliseconds–one second.
+Review the SDK's TCP keepalive defaults as well. Set explicit options when
+an existing deployment needs its earlier timeout or retry policy. Cache
+wire records, key spaces, ownership, error classification, and supported
+standalone Redis topology are unchanged. Cache never closes borrowed clients.
+
+The published v2 module and its immutable API baseline remain available;
+v3 does not silently replace that input contract in a v2 release. Separate
+cache majors do not isolate their shared Redis SDK: Go's minimal version
+selection chooses one `github.com/redis/go-redis/v9` version for the whole
+build. Adding v3 can therefore select v9.22 for retained v2 imports too.
+Check and update custom Redis providers used by both cache majors before
+using them together; leaving a provider's cache imports on v2 does not protect
+it from the expanded SDK method requirements.
+
+Owned consumers such as `go-authorization` still expose v2 cache type
+identities. A v3 backend uses v3 `Record` and other named types and is not an
+automatic substitute for their v2 backend contract. Migrate those consumers
+under their own compatibility policy, or keep their existing cache major;
+this cache release does not change their public APIs.
+
+
 ## From v1 to v2
 
-The current source is the v2.0.0 release candidate. Do not change production
-dependencies until its tag resolves from the public module proxy without a local
-`replace` directive.
+Version 2 is published at `v2.0.0`. Its historical migration is described
+below; new v3 adoption must also follow the v2-to-v3 guidance above.
 
 Change the module and every package import from
 `github.com/faustbrian/go-cache` to `github.com/faustbrian/go-cache/v2`.
@@ -27,9 +67,7 @@ maximum 65536) and keep `MaxConcurrent` no greater than it. Handle
 `ErrFlightLimit` as local saturation, not a source failure; stale refreshes
 return the existing stale result together with this error.
 
-Release remains blocked until public v2 resolution and clean consumer checks
-succeed without local replacements. Known direct consumers requiring import
-migration are `go-authorization` (`authcache` and `adapters/cache`) and
+Known direct consumers requiring import migration are `go-authorization` (`authcache` and `adapters/cache`) and
 `go-service/integration/adoption`; `go-tenancy` also carries v1 imports in
 analyzer fixtures. This repository does not edit those separately owned
 consumers.

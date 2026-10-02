@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/go-cache/v2"
+	cache "github.com/faustbrian/go-cache/v3"
 )
 
 func TestSetIfOwnedUsesAtomicBackendCapability(t *testing.T) {
