@@ -5,6 +5,26 @@ Versioning and keeps an Unreleased section at the top.
 
 ## [Unreleased]
 
+### Changed
+
+- Adopt go-redis v9.22.0 at the `github.com/faustbrian/go-cache/v3`
+  module path. Both Redis adapters continue to expose the full SDK
+  `UniversalClient` in `Config.Client`; that interface now requires
+  `AutoPipeline`, `AutoPipelineWithOptions`, `AsyncAutoPipeline`, and
+  `AsyncAutoPipelineWithOptions`, together with the expanded SDK command
+  interface. Custom client implementations must implement the new SDK
+  contract before migrating all cache imports from `/v2` to `/v3`.
+  Published v2 tags and their API baseline remain unchanged.
+  Coexisting cache majors still share one Redis SDK through Go's minimal
+  version selection: adding v3 can require updating custom Redis providers
+  used by retained v2 imports as well.
+- go-redis defaults now use five-second read/write timeouts instead of three,
+  a derived six-second pool timeout instead of four, and retry backoffs of
+  10 milliseconds to one second instead of 8 to 512 milliseconds. Review
+  client timeout, retry, and TCP keepalive settings during migration; cache
+  adapters still borrow the application-owned client and do not override
+  its options or expand the supported standalone topology.
+
 ## [2.0.0] - 2026-09-30
 
 ### Added

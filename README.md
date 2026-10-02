@@ -5,7 +5,7 @@
 [![Coverage](https://img.shields.io/badge/coverage-100%25_required-blue)](CONTRIBUTING.md#verification)
 [![Mutation](https://img.shields.io/badge/mutation-100%25_required-blue)](CONTRIBUTING.md#verification)
 [![Documentation](https://img.shields.io/badge/docs-checked_in_CI-blue)](docs/)
-[![Go Reference](https://pkg.go.dev/badge/github.com/faustbrian/go-cache.svg)](https://pkg.go.dev/github.com/faustbrian/go-cache)
+[![Go Reference](https://pkg.go.dev/badge/github.com/faustbrian/go-cache/v3.svg)](https://pkg.go.dev/github.com/faustbrian/go-cache/v3)
 [![Release](https://img.shields.io/github/v/release/faustbrian/go-cache?sort=semver)](https://github.com/faustbrian/go-cache/releases)
 [![Go](https://img.shields.io/badge/go-1.27.0-00ADD8?logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -20,9 +20,9 @@ The semantic API does not expose Redis or Valkey client types. Backends keep
 their native clients and atomic behavior while applications share one portable
 contract.
 
-The published v1 module is a stable member of Golib's Persistence and
-durability family. The current source is the v2.0.0 release candidate with
-protected-error and bounded-shutdown contracts.
+The published v2 module retains its protected-error and bounded-shutdown
+contracts. Current source prepares v3 adoption of go-redis v9.22's expanded
+custom-client interface; see the v2-to-v3 migration guide before upgrading.
 For ecosystem-wide selection and ownership guidance, see the versioned
 [Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/README.md)
 and its
@@ -31,7 +31,7 @@ and its
 ## Install
 
 ```sh
-go get github.com/faustbrian/go-cache
+go get github.com/faustbrian/go-cache/v3@v3.0.0
 ```
 
 Go 1.27.0 or newer is required.
@@ -46,8 +46,8 @@ import (
 	"fmt"
 	"time"
 
-	cache "github.com/faustbrian/go-cache"
-	cachememory "github.com/faustbrian/go-cache/adapters/memory"
+	cache "github.com/faustbrian/go-cache/v3"
+	cachememory "github.com/faustbrian/go-cache/v3/adapters/memory"
 )
 
 type User struct {
@@ -101,14 +101,14 @@ func main() {
 }
 ```
 
-## V2 adoption
+## V3 adoption
 
-Confirm that the `/v2 v2.0.0` tag resolves publicly before changing production
+Confirm that the `/v3 v3.0.0` tag resolves publicly before changing production
 dependencies. Consumers can migrate with the guide in `docs/migration.md`
 and, after publication, install it with:
 
 ```sh
-go get github.com/faustbrian/go-cache/v2@v2.0.0
+go get github.com/faustbrian/go-cache/v3@v3.0.0
 ```
 
 Always inspect `Result.State`; a stored zero value can be a `Hit`. A miss is not

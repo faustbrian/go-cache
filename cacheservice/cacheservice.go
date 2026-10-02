@@ -1,6 +1,6 @@
 // Package cacheservice is the legacy cache service-lifecycle adapter.
 //
-// Deprecated: use github.com/faustbrian/go-cache/v2/adapters/service. This
+// Deprecated: use github.com/faustbrian/go-cache/v3/adapters/service. This
 // package remains supported for the longer of 180 days after successor
 // availability and two subsequently published stable root-module minor
 // releases.
@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	canonical "github.com/faustbrian/go-cache/v2/adapters/service"
+	canonical "github.com/faustbrian/go-cache/v3/adapters/service"
 	"github.com/faustbrian/go-service"
 )
 
