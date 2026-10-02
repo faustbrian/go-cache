@@ -25,6 +25,13 @@ Versioning and keeps an Unreleased section at the top.
   adapters still borrow the application-owned client and do not override
   its options or expand the supported standalone topology.
 
+### Maintenance
+
+- Update OpenTelemetry API and SDK dependencies from 1.44.0 to 1.45.0.
+  Histogram exemplars now use time-unbiased sampling without retaining
+  entire measurement contexts; collection also fixes stale aggregation
+  state.
+
 ## [2.0.0] - 2026-09-30
 
 ### Added
