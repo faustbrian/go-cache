@@ -4,8 +4,8 @@ import (
 	"context"
 	logslog "log/slog"
 
-	cache "github.com/faustbrian/go-cache/v2"
-	cacheslog "github.com/faustbrian/go-cache/v2/adapters/slog"
+	cache "github.com/faustbrian/go-cache/v3"
+	cacheslog "github.com/faustbrian/go-cache/v3/adapters/slog"
 )
 
 // Config selects the logger and level used by an Observer.

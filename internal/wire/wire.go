@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	cache "github.com/faustbrian/go-cache/v2"
+	cache "github.com/faustbrian/go-cache/v3"
 )
 
 const headerSize = 21

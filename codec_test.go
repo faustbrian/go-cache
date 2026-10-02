@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	cache "github.com/faustbrian/go-cache/v2"
+	cache "github.com/faustbrian/go-cache/v3"
 )
 
 type testPayload struct {

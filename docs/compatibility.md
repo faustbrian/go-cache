@@ -16,10 +16,14 @@ migration notes. Starting with `v1`, SemVer applies to:
 - portable deadlines and their wall-clock interpretation;
 - metric names, units, and label sets.
 
-The immutable released-v1 API snapshot is retained at
-`api/v1-baseline.txt`. The active v2 release candidate is checked against
-`api/v2-baseline.txt`; the baselines are intentionally independent because v2
-contains documented incompatible contracts.
+The immutable released-v1 and released-v2 API snapshots are retained at
+`api/v1-baseline.txt` and `api/v2-baseline.txt`. The active v3 source is checked
+against `api/v3-baseline.txt`; each major has an independent baseline because
+its documented incompatible contracts have a distinct module identity.
+Version 3 retains the Redis configuration's SDK `UniversalClient` type while
+adopting its expanded v9.22 method set. This changes the accepted custom-client
+contract and therefore requires a major version, not merely because the SDK
+version changed. See the v2-to-v3 migration guide.
 
 Adding a method to an exported interface is breaking. Changing a miss into an
 error (or an error into a miss), changing key output, accepting previously
