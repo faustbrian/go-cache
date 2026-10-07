@@ -45,7 +45,7 @@ func (RandomJitter) Duration(upperBound time.Duration) time.Duration {
 		return 0
 	}
 	// Jitter distributes expirations; it is not used for a security decision.
-	return time.Duration(rand.Int64N(int64(upperBound))) // #nosec G404
+	return time.Duration(rand.Int64N(int64(upperBound))) // #nosec G404 -- TTL jitter distributes expirations and never supplies credentials or security decisions.
 }
 
 // LoadPolicy bounds loading and enables optional negative and stale behavior.
@@ -160,7 +160,7 @@ func New[K, V any](config Config[K, V]) (*Cache[K, V], error) {
 		config.MaxBatch = defaultMaxBatch
 	}
 	// Close retains and invokes cancel after preventing new flights.
-	loadCtx, cancel := context.WithCancel(context.Background()) // #nosec G118
+	loadCtx, cancel := context.WithCancel(context.Background()) // #nosec G118 -- Cache retains cancel and Shutdown invokes it after rejecting new flights; Close delegates to Shutdown.
 	return &Cache[K, V]{
 		backend:      config.Backend,
 		keys:         config.Keys,

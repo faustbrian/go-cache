@@ -60,8 +60,8 @@ func Decode(encoded []byte, maxSize int) (cache.Record, error) {
 	record := cache.Record{
 		Payload: append([]byte(nil), encoded[headerSize:]...),
 		// The uint64 conversion preserves the signed UnixNano bit pattern.
-		ExpiresAt: time.Unix(0, int64(binary.BigEndian.Uint64(encoded[5:13]))),  // #nosec G115
-		StaleAt:   time.Unix(0, int64(binary.BigEndian.Uint64(encoded[13:21]))), // #nosec G115
+		ExpiresAt: time.Unix(0, int64(binary.BigEndian.Uint64(encoded[5:13]))),  // #nosec G115 -- Decode restores the signed UnixNano bit pattern stored by Encode; negative epochs are intentional.
+		StaleAt:   time.Unix(0, int64(binary.BigEndian.Uint64(encoded[13:21]))), // #nosec G115 -- Decode restores the signed UnixNano bit pattern stored by Encode; negative epochs are intentional.
 		Negative:  encoded[4]&1 != 0,
 	}
 	if err := record.Validate(); err != nil {
