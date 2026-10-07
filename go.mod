@@ -3,7 +3,7 @@ module github.com/faustbrian/go-cache/v3
 go 1.27.0
 
 require (
-	github.com/faustbrian/go-service v1.0.0
+	github.com/faustbrian/go-service v1.1.2
 	github.com/moby/moby/client v0.4.0
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/testcontainers/testcontainers-go v0.43.0
@@ -33,8 +33,8 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/faustbrian/go-cli v1.0.0 // indirect
-	github.com/faustbrian/go-correlation v1.0.0 // indirect
-	github.com/faustbrian/go-identifier v1.0.0 // indirect
+	github.com/faustbrian/go-correlation v1.1.1 // indirect
+	github.com/faustbrian/go-identifier/v2 v2.0.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
