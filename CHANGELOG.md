@@ -27,6 +27,10 @@ Versioning and keeps an Unreleased section at the top.
 
 ### Maintenance
 
+- Update Testcontainers from 0.43.0 to 0.44.0 for Redis and Valkey
+  integration fixtures, including its reaper-startup and exec-output
+  handling fixes. Preserve the current Moby selection and standalone
+  backend lifecycle, authentication, TLS and recovery contracts.
 - Update the Moby client and compatible Docker API/connection dependencies
   used by the Redis and Valkey integration fixtures, retaining the cache
   API, Testcontainers version and standalone backend contract.
