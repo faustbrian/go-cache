@@ -27,6 +27,9 @@ Versioning and keeps an Unreleased section at the top.
 
 ### Maintenance
 
+- Update the Moby client and compatible Docker API/connection dependencies
+  used by the Redis and Valkey integration fixtures, retaining the cache
+  API, Testcontainers version and standalone backend contract.
 - Adopt Service 1.1.2 and its Correlation/Identifier dependencies while
   preserving canonical and legacy cache lifecycle ownership and readiness.
 - Use Go 1.27.2 and compatible pinned CI tooling for standard-library
