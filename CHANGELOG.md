@@ -27,6 +27,11 @@ Versioning and keeps an Unreleased section at the top.
 
 ### Maintenance
 
+- Adopt Service 1.1.2 and its Correlation/Identifier dependencies while
+  preserving canonical and legacy cache lifecycle ownership and readiness.
+- Use Go 1.27.2 and compatible pinned CI tooling for standard-library
+  security fixes, retaining the public Go 1.27.0 module minimum. Consumers
+  must rebuild with patched Go to update their binaries' standard library.
 - Update OpenTelemetry API and SDK dependencies from 1.44.0 to 1.45.0.
   Histogram exemplars now use time-unbiased sampling without retaining
   entire measurement contexts; collection also fixes stale aggregation
