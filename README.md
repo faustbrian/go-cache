@@ -3,7 +3,7 @@
 [![CI](https://github.com/faustbrian/go-cache/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/faustbrian/go-cache/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/badge/CodeQL-required-blue)](https://github.com/faustbrian/go-cache/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-100%25_required-blue)](CONTRIBUTING.md#verification)
-[![Mutation](https://img.shields.io/badge/mutation-100%25_required-blue)](CONTRIBUTING.md#verification)
+[![Mutation](https://img.shields.io/badge/mutation-local_or_scheduled-blue)](CONTRIBUTING.md#verification)
 [![Documentation](https://img.shields.io/badge/docs-checked_in_CI-blue)](docs/)
 [![Go Reference](https://pkg.go.dev/badge/github.com/faustbrian/go-cache/v3.svg)](https://pkg.go.dev/github.com/faustbrian/go-cache/v3)
 [![Release](https://img.shields.io/github/v/release/faustbrian/go-cache?sort=semver)](https://github.com/faustbrian/go-cache/releases)
@@ -174,6 +174,11 @@ operations, adoption, compatibility, and security guidance.
 
 Development and verification guidance is in
 [CONTRIBUTING.md](CONTRIBUTING.md).
+Start with untagged `go test ./...` for deterministic tests and fuzz seeds.
+The bounded Make gates retain manifest-selected Redis/Valkey services and
+integration tags as well as focused loader/shutdown race assertions; they are
+not a Docker-free substitute for direct Go tests. Mutation is optional local
+or scheduled assurance, not a PR prerequisite.
 
 ## License
 
