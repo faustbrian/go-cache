@@ -8,6 +8,11 @@ on:
     - cron: '17 3 * * *'
   workflow_dispatch:
     inputs:
+      diagnose_cache_fuzz:
+        description: Temporarily measure cold fuzz phases at the held immutable candidate
+        required: false
+        default: false
+        type: boolean
       release_dry_run:
         description: Run the stable release rehearsal
         required: false
@@ -19,6 +24,85 @@ permissions:
   security-events: write
 
 jobs:
+  fuzz-diagnostic:
+    name: Temporary cold fuzz phase diagnostic
+    if: github.event_name == 'workflow_dispatch' && inputs.diagnose_cache_fuzz == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      GOENV: 'off'
+      GOWORK: 'off'
+      GOTOOLCHAIN: local
+      CGO_ENABLED: '1'
+      GOPROXY: https://proxy.golang.org
+      GOSUMDB: sum.golang.org
+      GOPRIVATE: ''
+      GONOPROXY: ''
+      GONOSUMDB: ''
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 016dfb9504e5398972312a5d6785550d7ed3b24e
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.2'
+          cache: false
+      - name: Measure unchanged cold and warm phases
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 016dfb9504e5398972312a5d6785550d7ed3b24e
+          task="$(mktemp -d "${RUNNER_TEMP}/cache-fuzz-phase.XXXXXX")"
+          printf 'CACHE_FUZZ_DIAGNOSTIC_ROOT=%s\n' "${task}" >>"${GITHUB_ENV}"
+          cleanup() {
+            result=$?
+            trap - EXIT
+            chmod -R u+w "${task}" || result=1
+            find "${task}" -depth -delete || result=1
+            exit "${result}"
+          }
+          trap cleanup EXIT
+          mkdir -m700 "${task}/cache" "${task}/mod" "${task}/tmp"
+          export GOCACHE="${task}/cache" GOMODCACHE="${task}/mod" GOTMPDIR="${task}/tmp"
+          go version
+          phase() {
+            label="$1"; budget="$2"; shift 2
+            started=$SECONDS
+            if timeout --signal=TERM --kill-after=5s "${budget}s" "$@" 2>&1 | tail -c65536; then
+              result=0
+            else
+              result=$?
+            fi
+            printf '\nphase=%s elapsed=%ss exit=%s\n' "${label}" "$((SECONDS-started))" "${result}"
+            return "${result}"
+          }
+          phase ordinary-root 180 go test -tags=integration . -count=1 -timeout=20m
+          phase exact-listing 60 go test -tags=integration . -run='^$' -list='^FuzzKeySpace$' -count=1 -timeout=15s -p=1
+          cold_result=0
+          phase cold-active 60 go test -x -tags=integration . -count=1 -timeout=15s -run='^$' -fuzz='^FuzzKeySpace$' -fuzztime=2s -parallel=2 -p=1 || cold_result=$?
+          if [[ "${cold_result}" != 0 ]]; then
+            phase partial-cache-active 60 go test -x -tags=integration . -count=1 -timeout=15s -run='^$' -fuzz='^FuzzKeySpace$' -fuzztime=2s -parallel=2 -p=1 || true
+          fi
+          exit "${cold_result}"
+      - name: Remove interrupted diagnostic cache
+        if: always()
+        run: |
+          set -euo pipefail
+          if [[ -z "${CACHE_FUZZ_DIAGNOSTIC_ROOT:-}" ]]; then exit 0; fi
+          case "${CACHE_FUZZ_DIAGNOSTIC_ROOT}" in
+            "${RUNNER_TEMP}"/cache-fuzz-phase.*/*) exit 1 ;;
+            "${RUNNER_TEMP}"/cache-fuzz-phase.*) ;;
+            *) exit 1 ;;
+          esac
+          [[ ! -L "${CACHE_FUZZ_DIAGNOSTIC_ROOT}" ]]
+          if [[ -d "${CACHE_FUZZ_DIAGNOSTIC_ROOT}" ]]; then
+            chmod -R u+w "${CACHE_FUZZ_DIAGNOSTIC_ROOT}"
+            find "${CACHE_FUZZ_DIAGNOSTIC_ROOT}" -depth -delete
+          fi
+          test ! -e "${CACHE_FUZZ_DIAGNOSTIC_ROOT}"
+
   ci:
     uses: faustbrian/go-library-tools/.github/workflows/library-ci.yml@eff8b2127c361ee2f422123824a1d337cc277ac4 # v2.1.1
     with:
