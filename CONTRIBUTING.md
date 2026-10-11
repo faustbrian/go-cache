@@ -40,6 +40,9 @@ that hide a failing package.
 
 ## Verification
 
+Use the checksum-pinned public Tools v2.1.3 release declared in `.golib.yaml`.
+Download its released `golib` binary rather than building the verifier from source.
+
 The repository contract is pinned in [`.golib.yaml`](.golib.yaml). The root
 Makefile is intentionally a thin local wrapper around the released `golib`
 CLI; package-specific checks belong in typed configuration operations or

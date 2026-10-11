@@ -24,9 +24,9 @@ The published v2 module retains its protected-error and bounded-shutdown
 contracts. Current source prepares v3 adoption of go-redis v9.22's expanded
 custom-client interface; see the v2-to-v3 migration guide before upgrading.
 For ecosystem-wide selection and ownership guidance, see the versioned
-[Golib ecosystem index](https://github.com/faustbrian/go-library-tools/tree/531e4db50fd81a7201257a7b488a0cf22d333aca/docs/ecosystem)
+[Golib ecosystem index](https://github.com/faustbrian/go-library-tools/tree/v2.1.3/docs/ecosystem)
 and its
-[Persistence and durability family](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/design-language.md#package-families-and-selection).
+[Persistence and durability family](https://github.com/faustbrian/go-library-tools/blob/v2.1.3/docs/ecosystem/design-language.md#package-families-and-selection).
 
 ## Install
 
