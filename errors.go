@@ -94,7 +94,9 @@ const (
 // Construct errors with NewError when a source cause must remain recognizable
 // through errors.Is without exposing its text or concrete type.
 type Error struct {
-	Kind      ErrorKind
+	// Kind selects a stable category; unknown values add no sentinel.
+	Kind ErrorKind
+	// Operation is included in diagnostics; callers must supply a safe action name.
 	Operation Operation
 	cause     error
 }
@@ -115,6 +117,7 @@ func NewError(kind ErrorKind, operation Operation, cause error) *Error {
 	return &Error{Kind: kind, Operation: operation, cause: protectCause(cause)}
 }
 
+// Error formats the action and category without formatting the protected cause.
 func (e *Error) Error() string {
 	if e == nil {
 		return "<nil>"
@@ -126,6 +129,8 @@ func (e *Error) Error() string {
 	return message
 }
 
+// Unwrap exposes category and protected identity for errors.Is, not the raw cause.
+// It returns nil for a nil receiver or an uncategorized error without a cause.
 func (e *Error) Unwrap() []error {
 	if e == nil {
 		return nil

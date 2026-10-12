@@ -1,9 +1,12 @@
 # Codecs and schema evolution
 
-The built-in `JSONCodec[V]` uses a one-byte nonzero version followed by strict
-JSON. The configured encoded-size limit is checked on encode and before decode.
-Unknown fields, trailing values, malformed data, and version mismatch fail
-explicitly.
+The built-in `JSONCodec[V]` encodes a one-byte nonzero version followed by JSON.
+Encode rejects a zero configured version; Decode only compares the
+incoming version and can accept zero when configured zero. json.Marshal and
+custom encoding work occur before the encoded-size check. Decode checks wire
+size before JSON parsing. Unknown struct fields, trailing values, malformed
+data and version mismatch fail explicitly; maps and custom methods retain
+encoding/json semantics.
 
 Go map keys supported by `encoding/json` are sorted, so equivalent map values
 produce deterministic bytes. A nil pointer encodes as JSON `null` and remains a
@@ -34,4 +37,7 @@ The version byte identifies an application schema, not a Go type at runtime.
 Never reuse one key space and codec version for different semantic types even
 if their current JSON shapes happen to decode successfully. The built-in codec
 does not compress, so decompression bombs do not apply; allocation and parsing
-remain bounded by the encoded-size limit.
+are constrained by input bytes, not a total heap/CPU bound. Custom JSON methods
+can perform additional work; field matching, duplicate keys, maps and nulls
+retain encoding/json semantics. Unknown struct fields are rejected, not every
+possible unknown application field.

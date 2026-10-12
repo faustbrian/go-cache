@@ -31,17 +31,27 @@ const (
 
 // Event is a redacted semantic observation with no key or value fields.
 type Event struct {
+	// Operation names the action; direct caller strings are not automatically redacted.
 	Operation Operation
-	Outcome   Outcome
-	Duration  time.Duration
-	Size      int
+	// Outcome names the result; bundled cache producers use the defined constants.
+	Outcome Outcome
+	// Duration is non-negative cache-clock elapsed time for bundled producers.
+	Duration time.Duration
+	// Size is payload bytes for reads/writes, or retained key+payload bytes for removals.
+	Size int
 }
 
-// Observer receives best-effort semantic events from cache operations.
+// Observer receives synchronous semantic events from cache operations.
+// Notification discards returned errors and recovers observer panics, but cannot
+// force a blocked callback to return. Implementations must bound work, support
+// concurrent calls and avoid re-entering publication locks. Contexts can be
+// caller-owned or cache-load-owned; event fields alone are not a redaction engine.
 type Observer interface {
+	// Observe receives an event synchronously; returned errors and panics are ignored by cache notification.
 	Observe(context.Context, Event) error
 }
 
+// notify isolates the callback outcome, not its latency or external side effects.
 func notify(ctx context.Context, observer Observer, event Event) {
 	if observer == nil {
 		return

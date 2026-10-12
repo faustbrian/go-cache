@@ -10,8 +10,11 @@ import (
 
 // Config selects the logger and level used by an Observer.
 type Config struct {
-	Logger      *logslog.Logger
-	Level       logslog.Level
+	// Logger is retained and caller-owned, including handlers and their blocking behavior.
+	Logger *logslog.Logger
+	// Level is the level passed to LogAttrs without filtering in this adapter.
+	Level logslog.Level
+	// IncludeSize adds the size_bytes field when true; zero omits it.
 	IncludeSize bool
 }
 

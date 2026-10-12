@@ -13,11 +13,16 @@ import (
 // BackendHarness supplies a backend and a deterministic way to make it
 // unavailable. MakeUnavailable is called after all live-backend checks.
 type BackendHarness struct {
-	Backend         cache.Backend
+	// Backend is an exclusively test-owned backend with an empty test-key namespace.
+	Backend cache.Backend
+	// MakeUnavailable is invoked last; it must make operations fail and own service cleanup.
 	MakeUnavailable func(*testing.T)
 }
 
-// RunBackendConformance verifies the portable Backend contract.
+// RunBackendConformance exercises selected portable backend assertions. It
+// mutates fixed conformance keys, then calls MakeUnavailable last. Most live
+// calls use Background, so the backend/test runner must bound operations. This
+// is not expiry precision, race, topology or ownership-lease qualification.
 func RunBackendConformance(t *testing.T, harness BackendHarness) {
 	t.Helper()
 	if harness.Backend == nil {

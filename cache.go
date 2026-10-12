@@ -24,15 +24,21 @@ const MaxLoadFlights = 1 << 16
 
 // LoadResult is the value and existence result returned by a Loader.
 type LoadResult[V any] struct {
+	// Value is the loader result, shared without deep copying among waiters.
 	Value V
+	// Found distinguishes a present zero/nil value from authoritative absence.
 	Found bool
 }
 
-// Loader fetches a logical key from its source of truth.
+// Loader fetches a logical key from its source of truth. It receives a
+// cache-owned context, not the first waiter's context/values/deadline. Honor its
+// cancellation and bound external calls; returned mutable V is shared among
+// flight waiters. Errors are protected; panic values are discarded as ErrLoaderPanic.
 type Loader[K, V any] func(context.Context, K) (LoadResult[V], error)
 
 // JitterSource chooses how much time to subtract from a loaded value's TTL.
 type JitterSource interface {
+	// Duration chooses TTL subtraction; custom results must be within the requested bound.
 	Duration(time.Duration) time.Duration
 }
 
@@ -50,32 +56,51 @@ func (RandomJitter) Duration(upperBound time.Duration) time.Duration {
 
 // LoadPolicy bounds loading and enables optional negative and stale behavior.
 type LoadPolicy struct {
+	// MaxConcurrent bounds running loaders; zero selects 64.
 	MaxConcurrent int
 	// MaxFlights bounds distinct-key flights, including queued loads and
 	// completed flights retained by an explicit mutation. Zero defaults to 1024.
-	MaxFlights           int
-	MaxWaitersPerKey     int
-	NegativeTTL          time.Duration
+	MaxFlights int
+	// MaxWaitersPerKey bounds attached foreground callers per flight; zero selects 1024.
+	MaxWaitersPerKey int
+	// NegativeTTL is absence retention; zero disables storage of negative load results.
+	NegativeTTL time.Duration
+	// StaleWhileRevalidate serves stale data and admits a shared background refresh.
 	StaleWhileRevalidate bool
-	StaleIfError         bool
-	RefreshJitter        time.Duration
+	// StaleIfError returns the originally read stale value with a foreground refresh error.
+	StaleIfError bool
+	// RefreshJitter is the maximum loaded-value TTL subtraction; it must be below TTL.
+	RefreshJitter time.Duration
 }
 
 // Config contains all dependencies, limits, and policies for a Cache.
 type Config[K, V any] struct {
-	Backend  Backend
-	Keys     KeySpace[K]
-	Codec    Codec[V]
-	TTL      TTLPolicy
-	Clock    Clock
+	// Backend is a retained collaborator; Cache shutdown does not close it.
+	Backend Backend
+	// Keys must be built by NewKeySpace; New does not validate a zero key space.
+	Keys KeySpace[K]
+	// Codec is retained and may be called concurrently; callbacks are not panic-isolated.
+	Codec Codec[V]
+	// TTL sets positive-record freshness, hard staleness and optional sliding reads.
+	TTL TTLPolicy
+	// Clock is retained; its Now method must be safe for concurrent bounded calls.
+	Clock Clock
+	// MaxValue is the positive encoded payload limit, excluding a backend wire header.
 	MaxValue int
+	// MaxBatch bounds sequential bulk items; zero selects 1000.
 	MaxBatch int
-	Load     LoadPolicy
-	Jitter   JitterSource
+	// Load configures process-local flight, loader, stale and negative policy.
+	Load LoadPolicy
+	// Jitter optionally supplies concurrent TTL sampling; nil selects RandomJitter when needed.
+	Jitter JitterSource
+	// Observer optionally receives synchronous events; Cache owns no exporter lifecycle.
 	Observer Observer
 }
 
-// Cache provides typed cache operations over a backend.
+// Cache provides concurrent typed cache operations over a retained backend.
+// Use New; a zero/nil Cache is not usable. Dependencies must support concurrent
+// calls, non-nil contexts are required except that Shutdown rejects nil, and
+// callers own mutation of generic keys/values and dependency cleanup.
 type Cache[K, V any] struct {
 	backend      Backend
 	keys         KeySpace[K]
@@ -101,6 +126,9 @@ type Cache[K, V any] struct {
 	beforeLoadPublication func()
 }
 
+// loadFlight publishes result/err before closing done. loadMu owns accounting;
+// mutation separately orders explicit writes with load publication, so a flight
+// retained by a waiting mutation still consumes admission capacity.
 type loadFlight[V any] struct {
 	done          chan struct{}
 	result        Result[V]
@@ -116,7 +144,10 @@ type loadContextKey struct{}
 
 type activeLoadContext struct{ owner any }
 
-// New validates config and constructs a typed cache.
+// New validates dependencies, TTL and load bounds and constructs an inert cache.
+// Keys must already come from NewKeySpace; its zero value is not validated here.
+// No goroutine is started until a flight is admitted. Config collaborators are
+// retained by identity; construction does not clone or open backend resources.
 func New[K, V any](config Config[K, V]) (*Cache[K, V], error) {
 	if isNilDependency(config.Backend) || isNilDependency(config.Codec) || isNilDependency(config.Clock) ||
 		isTypedNil(config.Jitter) || isTypedNil(config.Observer) || config.MaxValue <= 0 || config.MaxBatch < 0 {
@@ -181,7 +212,11 @@ func New[K, V any](config Config[K, V]) (*Cache[K, V], error) {
 	}, nil
 }
 
-// Get returns an explicit hit, miss, or stale result.
+// Get returns an explicit hit, negative/ordinary miss, or stale result.
+// Freshness is Before(ExpiresAt); StaleAt is exclusive hard expiry. Hard expiry
+// cleanup failures remain errors. Positive Decode ownership comes from Codec.
+// Sliding fresh reads rewrite the record using IfPresent, not record-version
+// compare-and-set, and can race a newer write. Stale/negative reads do not slide.
 func (c *Cache[K, V]) Get(ctx context.Context, logical K) (result Result[V], err error) {
 	start := c.clock.Now()
 	size := 0
@@ -256,7 +291,15 @@ func (c *Cache[K, V]) Get(ctx context.Context, logical K) (result Result[V], err
 	return Result[V]{State: Hit, Value: value}, nil
 }
 
-// GetOrLoad returns a cached value or coalesces a bounded source load.
+// GetOrLoad returns a cached value or coalesces source work by encoded key.
+// The first admitted flight's loader/key arguments serve every follower. Caller
+// cancellation only detaches that waiter, including the last waiter. All
+// followers of a published found load share its original V, not deep copies.
+// Double checks or superseding mutations can instead return current decoded state.
+// Stale-while-revalidate returns admission errors with stale data; later refresh
+// errors are observed. Stale-if-error returns the original stale data plus error.
+// Recursive calls with the supplied loader context reject the same Cache even
+// for a different key; discarding that context bypasses detection.
 func (c *Cache[K, V]) GetOrLoad(ctx context.Context, logical K, loader Loader[K, V]) (Result[V], error) {
 	active, ok := ctx.Value(loadContextKey{}).(activeLoadContext)
 	switch ok {
@@ -506,7 +549,7 @@ func (c *Cache[K, V]) detachWaiter(flight *loadFlight[V]) {
 }
 
 // Close cancels active loads, rejects new loads, and waits up to five seconds
-// for loader cleanup.
+// for loader/notification cleanup. It does not close the backend or client.
 func (c *Cache[K, V]) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), c.closeTimeout)
 	defer cancel()
@@ -515,7 +558,9 @@ func (c *Cache[K, V]) Close() error {
 }
 
 // Shutdown cancels active loads, rejects new loads, and waits for loader
-// cleanup within ctx. A nil error means all active loads have completed.
+// cleanup within ctx. A nil error means all active loads have completed,
+// including synchronous load observers, not all independent foreground calls.
+// Supplied backends/clients remain caller-owned and are not closed.
 // ErrShutdownIncomplete permits late completion of already-admitted backend
 // work when trusted callbacks or backends ignore cancellation.
 func (c *Cache[K, V]) Shutdown(ctx context.Context) error {
@@ -815,6 +860,8 @@ func (c *Cache[K, V]) Delete(ctx context.Context, logical K) (err error) {
 	return nil
 }
 
+// lockFlightMutation reserves a reference before waiting: finishing the loader
+// must not remove/recreate the key flight while an explicit mutation still owns it.
 func (c *Cache[K, V]) lockFlightMutation(key string, lock bool) *loadFlight[V] {
 	if !lock {
 		return nil

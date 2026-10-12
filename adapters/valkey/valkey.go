@@ -39,8 +39,11 @@ return 1
 
 // Config supplies the native client, clock, and maximum wire record size.
 type Config struct {
-	Client        valkeyclient.CommandClient
-	Clock         cache.Clock
+	// Client is caller-owned; configure concurrency, TLS, retries and timeouts externally.
+	Client valkeyclient.CommandClient
+	// Clock is retained for relative TTL calculation; clock skew affects server expiry.
+	Clock cache.Clock
+	// MaxRecordSize is the positive wire-byte ceiling, including the 21-byte envelope header.
 	MaxRecordSize int
 }
 
@@ -76,7 +79,9 @@ func isNilDependency(dependency any) bool {
 	return false
 }
 
-// Get reads and validates one bounded wire record.
+// Get reads and validates one bounded wire record. The Lua preflight rejects
+// oversized string values before GET; malformed/wrong-type data remains an
+// error. Raw backend reads can outlive local StaleAt due to server/clock timing.
 func (b *Backend) Get(ctx context.Context, key string) (cache.Record, bool, error) {
 	if err := ctx.Err(); err != nil {
 		return cache.Record{}, false, err
@@ -100,7 +105,9 @@ func (b *Backend) Get(ctx context.Context, key string) (cache.Record, bool, erro
 	return record, true, nil
 }
 
-// Set atomically writes a record with its stale deadline as server expiry.
+// Set atomically writes a record with its stale deadline as relative expiry.
+// Non-positive remaining TTL is rejected; positive sub-millisecond TTL uses
+// 1 ms. Conditions test server key existence, not a record-version fence.
 func (b *Backend) Set(
 	ctx context.Context,
 	key string,
@@ -138,6 +145,9 @@ func (b *Backend) Set(
 
 // SetIfOwned atomically compares an active Valkey lease hash and publishes the
 // record. A missing, expired, or superseded lease returns ErrOwnershipLost.
+// The guard must describe a compatible hash on the same supported standalone
+// deployment. Tokens are compared for equality, not numeric ordering. This
+// neither acquires/renews a lease nor fences durable non-cache side effects.
 func (b *Backend) SetIfOwned(
 	ctx context.Context,
 	key string,

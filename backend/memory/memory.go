@@ -9,17 +9,25 @@ import (
 
 // Config defines hard entry and retained-byte limits for a Backend.
 type Config struct {
+	// MaxEntries bounds retained entries, not all allocations or initial map overhead.
 	MaxEntries int
-	MaxBytes   int
-	Clock      cache.Clock
-	Observer   cache.Observer
+	// MaxBytes bounds retained key+payload bytes, excluding map/list/runtime overhead.
+	MaxBytes int
+	// Clock is retained and called under the backend mutex; it must not re-enter.
+	Clock cache.Clock
+	// Observer optionally receives removal events after unlocking; it may block the call.
+	Observer cache.Observer
 }
 
 // Stats is a snapshot of retained state and cumulative removals.
 type Stats struct {
-	Entries     int
-	Bytes       int
-	Evictions   uint64
+	// Entries counts retained entries, including expired entries not yet touched.
+	Entries int
+	// Bytes counts retained key+payload bytes, not total process memory.
+	Bytes int
+	// Evictions counts capacity removals since construction, not explicit deletes.
+	Evictions uint64
+	// Expirations counts lazy hard-deadline removals since construction.
 	Expirations uint64
 }
 

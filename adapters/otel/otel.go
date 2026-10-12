@@ -80,7 +80,9 @@ func isNilDependency(dependency any) bool {
 	return false
 }
 
-// Observe records one validated, low-cardinality cache event.
+// Observe records one enum-validated event synchronously. Duration/size are
+// not range-checked here; direct callers must supply suitable measurements.
+// Caller-owned instruments/exporters determine blocking and shutdown behavior.
 func (o *Observer) Observe(ctx context.Context, event cache.Event) error {
 	if !validOperation(event.Operation) || !validOutcome(event.Outcome) {
 		return fmt.Errorf("invalid cache telemetry event")

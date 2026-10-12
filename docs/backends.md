@@ -8,8 +8,10 @@ least recently used records until both bounds are satisfied and reports
 eviction/expiration events when configured with an observer.
 
 Expiration is lazy: reads and conditional mutations remove expired entries.
-There is no janitor goroutine or timer. `MaxBytes` excludes Go runtime, map, and
-list overhead, so production limits need headroom.
+Stats does not sweep. Set accepts a structurally valid past StaleAt and the
+record then expires on access; network Set instead rejects non-positive
+remaining TTL. There is no janitor goroutine or timer. `MaxBytes` excludes Go
+runtime, map, and list overhead, so production limits need headroom.
 
 ```go
 backend, err := cachememory.New(cachememory.Config{
@@ -42,7 +44,9 @@ versioned record envelope, applies `NX`/`XX` atomically, and sets server expiry
 to a relative duration ending at the record's stale deadline. Server expiry has
 millisecond precision and positive sub-millisecond durations use 1 ms.
 Portable records omit Go's process-local monotonic clock reading, matching the
-Redis wire representation.
+Redis wire representation. MaxRecordSize includes the 21-byte header; it is
+not the same bound as Cache.MaxValue. Local/server clock skew, command latency
+and native retries can shift actual server retention from the local deadline.
 
 ## Valkey with valkey-go
 

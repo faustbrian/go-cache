@@ -21,7 +21,9 @@ import (
 
 // TLSMaterial contains a trusted server identity for a test container.
 type TLSMaterial struct {
-	Files        []testcontainers.ContainerFile
+	// Files holds one-shot certificate/key readers for the test container; do not log them.
+	Files []testcontainers.ContainerFile
+	// ClientConfig trusts the generated CA and verifies cache.test; caller owns its use.
 	ClientConfig *tls.Config
 }
 

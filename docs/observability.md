@@ -16,11 +16,15 @@ Only enumerated operation and outcome labels are accepted. Instrument creation
 errors are returned from the constructor.
 Import the adapter as `github.com/faustbrian/go-cache/v3/adapters/otel`.
 
-The slog adapter records the same bounded fields. Configure its logger and
-level explicitly. It never logs keys, values, or causes.
+The slog adapter records the same named fields, but unlike OTel it forwards
+operation/outcome strings without enum validation. Direct callers must supply
+safe bounded labels; configured logger/handler attributes can add data.
+Configure its logger and level explicitly. Bundled cache events have no key/value/cause fields; that
+is not a general sanitization guarantee for arbitrary labels or handlers.
 Import the adapter as `github.com/faustbrian/go-cache/v3/adapters/slog`.
 
-Observer failures and panics are best-effort and cannot alter cache behavior.
+Observer failures and panics are ignored by cache notification, but synchronous
+observers can delay completion/shutdown and have their own external effects.
 Monitor exporter health separately. Alert on backend and loader error outcomes,
 stale/negative ratios, waiter-limit rejections, latency, eviction rate, and
 retained memory. A high hit rate alone does not prove freshness or correctness.

@@ -7,6 +7,10 @@ Versioning and keeps an Unreleased section at the top.
 
 ### Changed
 
+- Document callback lifetimes, generic value sharing, provider expiry differences
+  and actual codec/resource limits without changing runtime behavior. Clarify
+  construction, observer and backend-conformance guidance for callers.
+
 - Adopt go-redis v9.22.0 at the `github.com/faustbrian/go-cache/v3`
   module path. Both Redis adapters continue to expose the full SDK
   `UniversalClient` in `Config.Client`; that interface now requires

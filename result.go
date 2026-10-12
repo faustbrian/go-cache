@@ -14,7 +14,10 @@ const (
 
 // Result is the explicit outcome of a typed cache read.
 type Result[V any] struct {
-	State    State
-	Value    V
+	// State is Hit, Miss or Stale on success; inspect the error before zero state.
+	State State
+	// Value is usable for Hit/Stale; generic references are not deep copied.
+	Value V
+	// Negative marks a cached or just-loaded authoritative-absence miss.
 	Negative bool
 }

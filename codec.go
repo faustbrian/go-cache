@@ -10,19 +10,31 @@ import (
 
 const defaultMaxEncodedSize = 1 << 20
 
-// Codec serializes and deserializes typed cache values.
+// Codec serializes and deserializes typed cache values. It is a retained
+// concurrency-safe collaborator, not a generic deep-copy or panic boundary.
+// Decode receives the retrieved record payload; resulting V ownership is defined
+// by the codec. Cache does not clone its returned value.
 type Codec[V any] interface {
+	// Encode serializes a borrowed V; callers must not mutate it during encoding.
 	Encode(V) ([]byte, error)
+	// Decode reads borrowed bytes and returns V with codec-defined ownership.
 	Decode([]byte) (V, error)
 }
 
-// JSONCodec stores strict JSON behind a one-byte schema version.
+// JSONCodec stores encoding/json data behind a one-byte schema version.
+// Decode disallows unknown struct fields and trailing documents; map/interface
+// fields and custom JSON methods retain encoding/json semantics. Version zero
+// is rejected by Encode, not independently by Decode. The size cap is a wire
+// bound, not a total heap/CPU bound or limit on user marshaling callbacks.
 type JSONCodec[V any] struct {
-	Version        byte
+	// Version is the schema byte; Encode rejects zero, Decode only compares it.
+	Version byte
+	// MaxEncodedSize bounds bytes including the version; non-positive selects 1 MiB.
 	MaxEncodedSize int
 }
 
-// Encode serializes a value with its configured schema version.
+// Encode serializes a value with its nonzero configured schema version.
+// json.Marshal and custom marshaling work occur before the encoded-size check.
 func (c JSONCodec[V]) Encode(value V) ([]byte, error) {
 	if c.Version == 0 {
 		return nil, fmt.Errorf("%w: version must be non-zero", ErrSchemaMismatch)

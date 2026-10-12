@@ -21,10 +21,14 @@ const (
 
 // Record is the portable value and expiration envelope stored by a Backend.
 type Record struct {
-	Payload   []byte
+	// Payload is caller-owned mutable encoded data; Clone isolates its bytes.
+	Payload []byte
+	// ExpiresAt is the first instant the value is no longer fresh.
 	ExpiresAt time.Time
-	StaleAt   time.Time
-	Negative  bool
+	// StaleAt is the hard usability deadline, at or after ExpiresAt.
+	StaleAt time.Time
+	// Negative marks authoritative absence and requires an empty payload.
+	Negative bool
 }
 
 // Clone returns a portable record whose payload does not alias the receiver.
@@ -37,6 +41,8 @@ func (r Record) Clone() Record {
 }
 
 // Validate checks deadline portability and negative-record invariants.
+// It does not compare deadlines with a clock or require a future hard expiry.
+// Portable time must round-trip through signed nanoseconds since the Unix epoch.
 func (r Record) Validate() error {
 	if slices.Contains([]bool{
 		r.ExpiresAt.IsZero(),
@@ -55,30 +61,46 @@ func portableTime(value time.Time) bool {
 	return time.Unix(0, value.UnixNano()).Equal(value)
 }
 
-// Backend is the atomic storage contract implemented by cache adapters.
+// Backend is the concurrent atomic storage contract implemented by adapters.
+// Presence denotes provider retention, not freshness; Cache.Get separately
+// enforces StaleAt using its clock. Server expiry may differ from that clock.
+// Implementations must honor contexts and copy retained/returned payload bytes.
+// Native clients, retries and shutdown remain provider/caller responsibilities;
+// memory lazy expiration and server TTL precision are not identical.
 type Backend interface {
+	// Get returns a payload copy and explicit presence; failures are not misses.
 	Get(context.Context, string) (Record, bool, error)
+	// Set atomically applies condition and owns stored payload bytes on success.
 	Set(context.Context, string, Record, Condition) (bool, error)
+	// Delete atomically removes a key and reports presence, not value contents.
 	Delete(context.Context, string) (bool, error)
 }
 
 // OwnershipGuard identifies backend-authenticated ownership for one protected
-// write. Implementations must return opaque storage coordinates, not logical
+// write. Methods must supply stable values during a call and must not panic.
+// Implementations must return opaque storage coordinates, not logical
 // keys or credentials.
 type OwnershipGuard interface {
+	// StorageKey returns the external lease storage coordinate; it may be sensitive.
 	StorageKey() string
+	// Owner returns the opaque identity to compare with the active owner.
 	Owner() string
+	// Token returns the opaque fencing identity to compare, not a numeric order.
 	Token() string
 }
 
 // OwnershipBackend atomically validates ownership and writes one record.
 type OwnershipBackend interface {
 	Backend
+	// SetIfOwned compares ownership and publishes atomically, or reports loss/failure.
 	SetIfOwned(context.Context, string, Record, OwnershipGuard) error
 }
 
-// Clock supplies time for deterministic expiration behavior.
+// Clock supplies time for wall-clock expiration behavior. Implementations must
+// be concurrency-safe, bounded and panic-free. Memory invokes Now under its
+// mutex, so clock callbacks must not re-enter that backend.
 type Clock interface {
+	// Now returns the time used for wall-clock deadlines; calls must be bounded.
 	Now() time.Time
 }
 

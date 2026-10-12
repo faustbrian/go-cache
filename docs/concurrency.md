@@ -20,13 +20,26 @@ the same budget and return the existing stale value with the rejection error.
 
 Each caller waits with its own context. Cancellation detaches only that waiter.
 The loader receives a cache-owned context so one impatient caller cannot cancel
-work needed by others. `Close` cancels that shared context, prevents new
+work needed by others. Even the last waiter's cancellation does not stop the
+flight. Caller context values and deadlines are not copied into load context.
+`Close` cancels that shared context, prevents new
 flights, waits up to five seconds for active goroutines, and is idempotent.
 `Shutdown` accepts a caller-owned context when another deadline is required.
 
 Loader panics are recovered, classified as `ErrLoaderPanic`, and cannot poison
 the flight map. Source errors match `ErrLoader`; they are never converted into
 negative entries. A `Found:false` result may create a bounded negative record.
+Only the loader wrapper and observer notification recover panics; clocks, codecs,
+key encoders, jitter, guards and backend callbacks remain trusted.
+
+Published found-load results share the loader's original V; double checks and
+superseding mutations may instead return decoded current state. Mutable maps,
+slices and pointers require application synchronization/immutability. The
+codec controls ownership of separately decoded reads; the generic cache does
+not deep-copy arbitrary values. Publication holds a per-flight mutation mutex
+while encoding, writing and notifying. Such callbacks must not re-enter that
+same-key mutation boundary. The separate superseded-load reread releases that
+mutex before its observer callbacks, as covered by the reentrancy assertion.
 
 A successful `Set`, `SetIfOwned`, `SetNegativeIfOwned`, `Add`, `Replace`, or
 `Delete` on the same cache instance wins over a concurrent foreground load or
@@ -55,7 +68,9 @@ five seconds; `Shutdown` returns it when the supplied context ends.
 Cancellation is checked before load publication, but is not an atomic storage
 commit barrier. A publication already admitted before shutdown may call or
 complete a cancellation-ignoring backend after `ErrShutdownIncomplete` returns.
-Successful `Shutdown` waits for all active loads, including their publication.
+Successful `Shutdown` waits for all active loads, including publication and
+synchronous load notifications. It does not join independent foreground
+operations already underway or close backend/client/exporter resources.
 Use context-aware backend I/O and separately bounded native-client operations;
 do not interpret incomplete shutdown as proof that side effects have stopped.
 

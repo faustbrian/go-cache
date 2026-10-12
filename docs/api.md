@@ -5,9 +5,10 @@ defines the behavioral contract that those signatures carry.
 
 ## Construction
 
-`New(Config[K, V])` requires a backend, key space, codec, clock, positive value
-limit, and valid positive TTL. Zero loader and batch limits select bounded
-defaults. Negative limits, contradictory stale policies, and jitter at or above
+`New(Config[K, V])` requires a backend, codec, clock, positive value limit and
+valid positive TTL. Supply Keys from NewKeySpace: New does not validate a
+zero-value key space, which has no usable encoder. Zero loader and batch limits
+select bounded defaults. Negative limits, contradictory stale policies, and jitter at or above
 the positive TTL are rejected.
 
 Construction errors match `ErrInvalidConfig`, `ErrInvalidTTL`, or
@@ -43,7 +44,9 @@ absence marker.
 - `Delete` is idempotent at the semantic API.
 
 Conditional false results are not errors. Backends must implement the
-conditions atomically.
+conditions atomically. Live refers to provider retention (including stale
+records), with server expiry precision/clock differences described in the
+backend guide. Sliding updates use IfPresent only, not record-version CAS.
 
 Protected publication fails with `ErrOwnershipUnsupported` when the configured
 backend lacks the optional capability. A missing, expired, or superseded guard
@@ -57,8 +60,11 @@ renew, or release leases.
 ## Cache-aside loading
 
 `GetOrLoad` first performs `Get`, then joins or creates one in-process flight
-per backend key. The loader returns `LoadResult[V]{Found:false}` for an
-authoritative absence. A loader error is not absence and matches `ErrLoader`.
+per backend key. Flights receive a cache-owned Background-derived context,
+not the first caller's values/deadline. A published found load shares the
+loader's original V among waiters without deep copies. Double checks or
+superseding mutations can instead return the current decoded state. The loader
+returns `LoadResult[V]{Found:false}` for an authoritative absence. A loader error is not absence and matches `ErrLoader`.
 
 Flights are bounded globally by `MaxFlights` (default 1024, maximum 65536);
 `MaxConcurrent` separately bounds executing loaders and cannot exceed that
@@ -124,8 +130,9 @@ the same protection.
 ## Observers
 
 `Observer.Observe` receives redacted `Event` values with operation, outcome,
-duration, and size only. Observer errors and panics are isolated from cache
-behavior. Implementations must keep labels bounded and must not infer or attach
+duration, and size only. Observer errors and panics do not replace operation
+results, but synchronous callbacks can block calls and loader cleanup.
+Implementations must keep labels bounded and must not infer or attach
 keys or values.
 
 ## Backend conformance
@@ -143,7 +150,7 @@ cachetest.RunBackendConformance(t, cachetest.BackendHarness{
 
 The suite checks misses, cloned payloads, positive and negative round trips,
 atomic conditions, idempotent deletion, cancellation, invalid records and
-conditions, expiration semantics, and that outages remain errors for reads,
+conditions, deadline portability, and that outages remain errors for reads,
 writes, and deletes. The outage hook runs last. Backends may expose additional
 native operations outside the semantic API. The optional `OwnershipBackend`
 contract is adapter-specific and is verified separately because ordinary cache

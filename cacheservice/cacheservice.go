@@ -33,16 +33,23 @@ type Shutdown[R any] func(context.Context, R) error
 
 // Options configure one cache lifecycle adapter.
 type Options[R any] struct {
-	Name      string
-	Resource  R
-	Startup   Startup[R]
+	// Name is the visible component label; supply a safe nonblank name.
+	Name string
+	// Resource is retained by identity, not cloned or automatically constructed.
+	Resource R
+	// Startup optionally validates using the supplied service context.
+	Startup Startup[R]
+	// Readiness optionally checks an active resource on every probe.
 	Readiness Check[R]
-	Shutdown  Shutdown[R]
+	// Shutdown transfers cleanup ownership when non-nil; it is attempted once.
+	Shutdown Shutdown[R]
 }
 
 // OptionsError identifies one rejected option.
 type OptionsError struct {
-	Field  string
+	// Field names the rejected construction option.
+	Field string
+	// Reason is a safe rejection description; arbitrary caller values are not sanitized.
 	Reason string
 }
 
@@ -57,8 +64,10 @@ func (err *OptionsError) Unwrap() error { return ErrInvalidOptions }
 // StartupError preserves validation and cleanup failures without formatting
 // either potentially sensitive cause.
 type StartupError struct {
+	// Validation is the original startup failure, exposed by Unwrap.
 	Validation error
-	Cleanup    error
+	// Cleanup is optional transferred-resource cleanup failure, exposed by Unwrap.
+	Cleanup error
 }
 
 // Error returns a secret-safe startup diagnostic.

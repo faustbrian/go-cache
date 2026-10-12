@@ -30,7 +30,8 @@ value and failure signal.
 - Source unavailable: matches `ErrLoader` and preserves the source error's
   `errors.Is` identity without exposing its concrete diagnostic.
 - Caller timeout: matches `context.DeadlineExceeded` directly.
-- Capacity or size limit: reject before unsafe retention/allocation.
+- Capacity or size limit: reject before backend retention; encoding and trusted
+  callback allocations can occur before a wire-size rejection.
 - Waiter saturation: return `ErrWaiterLimit`; shed load or increase a measured
   bound.
 - Shutdown: active loaders receive cancellation; new work returns `ErrClosed`;

@@ -11,8 +11,11 @@ import (
 
 // Config supplies the native client, clock, and maximum wire record size.
 type Config struct {
-	Client        valkeyclient.CommandClient
-	Clock         cache.Clock
+	// Client is caller-owned; configure concurrency, TLS, retries and timeouts externally.
+	Client valkeyclient.CommandClient
+	// Clock is retained for relative TTL calculation; clock skew affects server expiry.
+	Clock cache.Clock
+	// MaxRecordSize is the positive wire-byte ceiling, including the 21-byte envelope header.
 	MaxRecordSize int
 }
 

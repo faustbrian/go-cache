@@ -10,13 +10,14 @@ import (
 
 // KeyEncoder deterministically converts a typed logical key to bytes.
 type KeyEncoder[K any] interface {
+	// EncodeKey returns deterministic borrowed key bytes or an error; size/work are caller-bounded.
 	EncodeKey(K) ([]byte, error)
 }
 
 // StringKeyEncoder encodes strings without conversion.
 type StringKeyEncoder struct{}
 
-// EncodeKey returns the UTF-8 bytes of key.
+// EncodeKey returns an owned copy of key bytes without UTF-8 validation.
 func (StringKeyEncoder) EncodeKey(key string) ([]byte, error) {
 	return []byte(key), nil
 }
@@ -46,7 +47,9 @@ func NewKeySpace[K any](
 	}, nil
 }
 
-// Key returns a deterministic backend key without exposing logical key bytes.
+// Key hashes encoder bytes beneath the visible prefix. maxKeySize bounds the
+// final backend key, not logical input bytes or encoder work. No panic recovery
+// is provided. Use NewKeySpace; zero-value spaces have no encoder.
 func (s KeySpace[K]) Key(logical K) (string, error) {
 	encoded, err := s.encoder.EncodeKey(logical)
 	switch err {

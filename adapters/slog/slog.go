@@ -10,8 +10,11 @@ import (
 
 // Config selects the logger and level used by an Observer.
 type Config struct {
-	Logger      *logslog.Logger
-	Level       logslog.Level
+	// Logger is retained and caller-owned, including handlers and their blocking behavior.
+	Logger *logslog.Logger
+	// Level is the level passed to LogAttrs without filtering in this adapter.
+	Level logslog.Level
+	// IncludeSize adds the size_bytes field when true; zero omits it.
 	IncludeSize bool
 }
 
@@ -34,7 +37,10 @@ func New(config Config) (*Observer, error) {
 	}, nil
 }
 
-// Observe logs one event without key or value data.
+// Observe synchronously forwards event fields to the configured logger.
+// Unlike OTel it does not validate operation/outcome constants; direct callers
+// must supply bounded safe labels, and logger/handler attributes can add data.
+// This method does not itself recover handler panics.
 func (o *Observer) Observe(ctx context.Context, event cache.Event) error {
 	attributes := []logslog.Attr{
 		logslog.String("operation", string(event.Operation)),

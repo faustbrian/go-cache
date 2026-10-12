@@ -5,7 +5,9 @@
 // keeps the resource shared and guarantees the adapter never closes it.
 // Startup validation and readiness are opt-in and use service-provided
 // contexts. The adapter performs no retries, closes transferred resources once,
-// and preserves validation and cleanup causes without formatting them.
+// and preserves validation and cleanup causes without formatting them. Calls
+// are synchronous without forced cancellation or panic recovery. Use one
+// ordered service lifecycle, not arbitrary concurrent/repeated Start calls.
 package cacheservice
 
 import (
@@ -51,7 +53,9 @@ type Options[R any] struct {
 
 // OptionsError identifies one rejected option.
 type OptionsError struct {
-	Field  string
+	// Field names the rejected construction option.
+	Field string
+	// Reason is a safe rejection description; arbitrary caller values are not sanitized.
 	Reason string
 }
 
@@ -146,7 +150,9 @@ func (adapter *Adapter[R]) Readiness() (service.ReadinessCheck, bool) {
 	}, true
 }
 
-// Component returns the ordered service lifecycle component.
+// Component returns closures for the ordered service lifecycle. Start is not
+// guarded by stopOnce; callers must not restart/reorder a stopped component or
+// assume readiness prevents a resource from stopping after its active check.
 func (adapter *Adapter[R]) Component() service.Component {
 	return service.Component{
 		Name: adapter.name,
@@ -169,6 +175,8 @@ func (adapter *Adapter[R]) Component() service.Component {
 	}
 }
 
+// stopOnce owns the cleanup attempt, including a failed result; later Stop
+// calls reuse that result rather than retrying resource shutdown.
 func (adapter *Adapter[R]) stop(ctx context.Context) error {
 	adapter.stopOnce.Do(func() {
 		adapter.mu.Lock()

@@ -34,8 +34,9 @@ combination.
 
 ## Why are memory entries bounded twice?
 
-Entry count prevents metadata explosion; retained-byte limits prevent a small
-number of large records from exhausting memory.
+Entry count bounds retained metadata entries; byte accounting bounds retained
+key/payload lengths. Neither is a total heap limit: map/list overhead, initial
+map sizing, in-flight encodings and callbacks need separate application budgets.
 
 ## Should I cache errors?
 
