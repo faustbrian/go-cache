@@ -120,3 +120,12 @@ All task-owned Go caches, observation helpers and render output were removed.
 The complete comment/prose diff receives ordinary Tier A inspection and a pinned
 changed-content secret scan before the detached commit. Remote delivery and
 exact-source hosted CI are coordinator-owned, not established by local proof.
+
+## Objective Enforcement
+
+The checksum-pinned public Tools v2.4.0 verifier now supplies
+`make source-docs-check` as a prerequisite of the existing local and CI Make
+routes. Ordinary shared CI selects strict source-documentation checking and
+requires its result. Native prerequisites, operation budgets, security and
+release controls are retained. Hosted exact-head evidence is recorded by the
+coordination ledger; configuration alone does not establish green delivery.
