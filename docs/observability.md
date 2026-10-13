@@ -1,5 +1,7 @@
 # Observability and cardinality
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 Core events contain only operation, semantic outcome, duration, and size. They
 have no key/value field by design. Custom observers must not add logical keys,
 hashed backend keys, payloads, tenant IDs, or error strings as metric labels.
@@ -33,3 +35,6 @@ Compatible OTel observers may be constructed more than once from the same
 meter; the SDK shares their instrument definitions and both contribute counts.
 `BenchmarkObserver` reports the per-event allocation and latency cost. The
 callback is synchronous, so custom exporters must keep their own work bounded.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

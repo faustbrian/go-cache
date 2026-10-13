@@ -1,5 +1,7 @@
 # Threat model and risk register
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 Version: 2.0
 Reviewed: 2026-09-13
 Flight-admission review: 2026-09-30
@@ -93,3 +95,6 @@ boundary, assumption, mitigation, owner, or residual risk. Review it before a
 major release, after a security incident, when adding a backend or callback
 boundary, and when transport, ownership, keying, decoding, telemetry, or
 lifecycle contracts change. Private reports follow `SECURITY.md`.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

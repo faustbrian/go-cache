@@ -1,5 +1,7 @@
 # Keys, namespacing, versioning, and invalidation
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 A key space produces backend keys shaped like:
 
 ```text
@@ -27,3 +29,6 @@ fail the mutation workflow.
 Never use tenant IDs, email addresses, tokens, or other sensitive values as
 namespace/name parts. Those prefix parts are visible. Put all sensitive or
 high-cardinality material in the logical key so it is hashed.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

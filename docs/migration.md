@@ -1,5 +1,7 @@
 # Migration guide
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 ## From v2 to v3
 
 Version 3 adopts go-redis v9.22.0. The root and every cache subpackage move
@@ -134,3 +136,6 @@ Read every version in `CHANGELOG.md`. For changes to keys, codecs, TTLs, error
 semantics, interfaces, or adapters, follow the compatibility note and deploy in
 the stated order. Run your backend through `cachetest.RunBackendConformance`
 with a deterministic outage hook after upgrading.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

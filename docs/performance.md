@@ -1,5 +1,7 @@
 # Performance
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 The core is optimized for correctness under bounded resources. Measure with
 your value sizes, codec, backend latency, and contention pattern.
 
@@ -41,3 +43,6 @@ adds a conditional backend write to each fresh hit.
 Treat benchmark regression thresholds as environment-specific. CI records
 benchmark output and uses semantic tests, race checks, leak checks, and exact
 coverage as hard correctness gates.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

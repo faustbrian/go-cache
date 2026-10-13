@@ -1,5 +1,7 @@
 # Failure modes and fail-open decisions
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 `cache` preserves failures. Applications choose whether to degrade; the
 library does not silently turn corruption or backend loss into a miss.
 
@@ -36,3 +38,6 @@ value and failure signal.
   bound.
 - Shutdown: active loaders receive cancellation; new work returns `ErrClosed`;
   bounded cleanup expiration also matches `ErrShutdownIncomplete`.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

@@ -1,5 +1,7 @@
 # Compatibility and SemVer policy
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 The module requires Go 1.27.0 or newer. CI uses the patched Go 1.27.2
 toolchain; focused compatibility checks also cover the Go 1.27.0 minimum.
 
@@ -39,3 +41,6 @@ verified TLS. Cluster, Sentinel, automatic failover, redirects, and replica
 reads are outside the initial compatibility promise even when the supplied
 native client exposes them. Adding a tested topology expands the compatibility
 matrix and requires explicit changelog and operations guidance.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

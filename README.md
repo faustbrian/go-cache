@@ -2,10 +2,10 @@
 
 [![CI](https://github.com/faustbrian/go-cache/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/faustbrian/go-cache/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/badge/CodeQL-required-blue)](https://github.com/faustbrian/go-cache/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-100%25_required-blue)](CONTRIBUTING.md#verification)
-[![Mutation](https://img.shields.io/badge/mutation-local_or_scheduled-blue)](CONTRIBUTING.md#verification)
+[![Coverage](https://img.shields.io/badge/coverage-risk_selected-blue)](CONTRIBUTING.md#verification)
+[![Mutation](https://img.shields.io/badge/mutation-optional_local%2Fselected_scheduled-blue)](CONTRIBUTING.md#verification)
 [![Documentation](https://img.shields.io/badge/docs-checked_in_CI-blue)](docs/)
-[![Go Reference](https://pkg.go.dev/badge/github.com/faustbrian/go-cache/v3.svg)](https://pkg.go.dev/github.com/faustbrian/go-cache/v3)
+[![Go Reference](https://pkg.go.dev/badge/github.com/faustbrian/go-cache/v2.svg)](https://pkg.go.dev/github.com/faustbrian/go-cache/v2)
 [![Release](https://img.shields.io/github/v/release/faustbrian/go-cache?sort=semver)](https://github.com/faustbrian/go-cache/releases)
 [![Go](https://img.shields.io/badge/go-1.27.0-00ADD8?logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -31,12 +31,17 @@ and its
 ## Install
 
 ```sh
-go get github.com/faustbrian/go-cache/v3@v3.0.0
+go get github.com/faustbrian/go-cache/v2@v2.0.0
 ```
 
 Go 1.27.0 or newer is required.
 
-## Quickstart
+## Unreleased v3 source quickstart
+
+The unchanged example below describes the current `/v3` source, not an
+installable release. For a complete released example and `/v2` imports, use
+the [v2.0.0 README](https://github.com/faustbrian/go-cache/blob/v2.0.0/README.md).
+Do not use a local replacement as a public installation workaround.
 
 ```go
 package main
@@ -103,13 +108,10 @@ func main() {
 
 ## V3 adoption
 
-Confirm that the `/v3 v3.0.0` tag resolves publicly before changing production
-dependencies. Consumers can migrate with the guide in `docs/migration.md`
-and, after publication, install it with:
-
-```sh
-go get github.com/faustbrian/go-cache/v3@v3.0.0
-```
+V3 is not published. Use the v2.0.0 installation above and its versioned
+quickstart for released applications. The [migration guide](docs/migration.md)
+records the proposed v3 boundary; do not change production dependencies or
+substitute local source for a public release.
 
 Always inspect `Result.State`; a stored zero value can be a `Hit`. A miss is not
 an error. Backend, decoding, schema, policy, limit, and loader failures remain
@@ -183,3 +185,12 @@ or scheduled assurance, not a PR prerequisite.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Documentation navigation
+
+[Complete documentation map](docs/README.md#complete-documentation-map) · [Current source package map](docs/package-map.md)
+
+Use the [versioned ecosystem entry](https://github.com/faustbrian/go-library-tools/tree/v2.1.3/docs/ecosystem) for package
+selection. The [frozen compatibility cohort](https://github.com/faustbrian/go-library-tools/blob/v1.8.4/docs/ecosystem/compatibility-sets.md)
+is separate from current package releases and unpublished source changes.
+Adopting them does not silently update that cohort.

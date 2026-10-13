@@ -1,5 +1,7 @@
 # Adoption examples
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 ## API reads
 
 Cache an API read after authorization inputs are resolved. Include every input
@@ -52,3 +54,6 @@ return source.Get(ctx, key)
 ```
 
 Keep bypass code beside the use case. Do not put it in a generic backend wrapper.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

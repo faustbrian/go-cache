@@ -1,5 +1,7 @@
 # Policy decision guide
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 ## Plain cache-aside
 
 Start with `GetOrLoad` and no optional stale or negative policy. This is the
@@ -60,3 +62,6 @@ or another application-level fence. For reconstructible Valkey refreshes,
 `SetIfOwned` and `SetNegativeIfOwned` can atomically require an active external
 lease. The cache still does not claim a distributed lock or globally ordered
 invalidation.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

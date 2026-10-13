@@ -1,5 +1,7 @@
 # Troubleshooting
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 ## Unexpected misses
 
 Check key-space namespace, name, and version; codec version; native endpoint
@@ -63,3 +65,6 @@ go tool cover -html=coverage.out
 
 Add a semantic assertion for the uncovered behavior; do not add line-execution
 tests without a contract.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

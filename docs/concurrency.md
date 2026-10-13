@@ -1,5 +1,7 @@
 # Stampede control and concurrency model
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 `GetOrLoad` coalesces work by the fully encoded backend key. Coalescing is
 process-local; it is not a distributed lock and does not promise exactly-once
 loading across processes.
@@ -79,3 +81,6 @@ make progress subject to Go scheduler and channel scheduling. A loader must not
 recursively call the same cache with its supplied context; such calls return
 `ErrRecursiveLoad`. If it discards that context, recursion cannot be detected
 and may deadlock, which is another reason context propagation is mandatory.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

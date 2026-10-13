@@ -1,5 +1,7 @@
 # Backend guide
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 ## Memory
 
 The memory backend is a concurrency-safe LRU bounded by both entry count and
@@ -102,3 +104,6 @@ cluster, Sentinel, failover, or replica client is possible at the type level but
 is not a support claim. Redirects, replica staleness, script routing, cross-slot
 protected writes, and cross-node TLS remain unverified. Bulk cache methods are
 sequential one-key operations and do not use pipelines or transactions.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

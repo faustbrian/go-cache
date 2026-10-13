@@ -1,5 +1,7 @@
 # Operations guide
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 ## Before deployment
 
 Choose explicit bounds from measured value sizes and concurrency. Configure
@@ -92,3 +94,6 @@ For unexpected misses, compare namespace/name/version, codec version, native
 database, hard deadline, server eviction, and invalidation history. For schema
 errors, stop readers from treating corruption as absence, identify the writer
 version, and roll forward with a new key/codec version.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

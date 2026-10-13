@@ -1,5 +1,7 @@
 # API reference
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 The Go package documentation is the source of truth for signatures. This guide
 defines the behavioral contract that those signatures carry.
 
@@ -170,3 +172,6 @@ later-declared components drain, cleans up failed startup, and executes once
 across repeated shutdown calls. Callers and service contexts bound operations;
 the adapter adds no retry or cache policy and preserves existing error
 classification.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

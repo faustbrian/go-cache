@@ -1,5 +1,7 @@
 # Codecs and schema evolution
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 The built-in `JSONCodec[V]` encodes a one-byte nonzero version followed by JSON.
 Encode rejects a zero configured version; Decode only compares the
 incoming version and can accept zero when configured zero. json.Marshal and
@@ -41,3 +43,6 @@ are constrained by input bytes, not a total heap/CPU bound. Custom JSON methods
 can perform additional work; field matching, duplicate keys, maps and nulls
 retain encoding/json semantics. Unknown struct fields are rejected, not every
 possible unknown application field.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

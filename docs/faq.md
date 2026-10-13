@@ -1,5 +1,7 @@
 # FAQ
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 ## Why is a miss not an error?
 
 Absence is an expected cache state. `Result.State == Miss` stays distinct from
@@ -41,3 +43,6 @@ map sizing, in-flight encodings and callbacks need separate application budgets.
 ## Should I cache errors?
 
 No. Return loader errors. Negative caching is only for authoritative absence.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.
