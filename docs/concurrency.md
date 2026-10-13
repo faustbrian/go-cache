@@ -34,6 +34,19 @@ negative entries. A `Found:false` result may create a bounded negative record.
 Only the loader wrapper and observer notification recover panics; clocks, codecs,
 key encoders, jitter, guards and backend callbacks remain trusted.
 
+The dated Version 2 `GC-SEC-001` risk-register assessment is not a blanket
+panic-containment guarantee for every dependency. Returned key/codec errors and
+non-cancellation backend errors pass through the protected error boundary.
+Cancellation/deadline-shaped backend errors retain the documented direct-return
+contract; see [API errors](api.md#errors). A panic outside the two recovery
+wrappers does not become a protected error. Use bounded, concurrency-safe,
+panic-free implementations outside those wrappers. A foreground callback panic
+can propagate to its caller; one escaping a cache-owned load goroutine can
+terminate the process. Caller-side recovery is not containment of that worker.
+This is the trusted-callback boundary already recorded by `GC-SEC-010`, not a
+new review verdict or a sandbox for arbitrary callback code. Historical review
+dates and the original risk-register verdict remain unchanged.
+
 Published found-load results share the loader's original V; double checks and
 superseding mutations may instead return decoded current state. Mutable maps,
 slices and pointers require application synchronization/immutability. The
