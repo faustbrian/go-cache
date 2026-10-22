@@ -12,6 +12,9 @@ harnesses and service composition. Named risks are misleading ownership,
 cancellation, callback, expiration and resource guarantees, not a request to
 repair runtime behavior or requalify unchanged services.
 
+This is a historical audit of the v3 source. Its facade, `backend/*`,
+`cacheservice` and `api/v3-baseline.txt` rows describe that tree, not v4.
+
 ## Reproducible before-write inventory
 
 `git ls-files` and `golib source-docs inventory --json` identify one v3 root

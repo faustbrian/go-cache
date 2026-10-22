@@ -24,8 +24,8 @@ Versioning and keeps an Unreleased section at the top.
 
 ### Maintenance
 
-- Raise the OpenTelemetry API and metric API minimums from 1.45.0 to 1.46.0,
-  selected by Service v3.
+- Raise the OpenTelemetry API and metric API minimums from 1.45.0 to 1.46.0
+  and go-correlation from 1.1.1 to 1.1.2, selected by Service v3.
 
 ## [3.0.0] - 2026-10-22
 

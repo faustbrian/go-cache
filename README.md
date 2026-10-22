@@ -20,9 +20,9 @@ The semantic API does not expose Redis or Valkey client types. Backends keep
 their native clients and atomic behavior while applications share one portable
 contract.
 
-The published v2 module retains its protected-error and bounded-shutdown
-contracts. Current source prepares v3 adoption of go-redis v9.22's expanded
-custom-client interface; see the v2-to-v3 migration guide before upgrading.
+V4 is the current major. Upgrading from an earlier major follows the
+[migration guide](docs/migration.md), including v3's adoption of go-redis
+v9.22's expanded custom-client interface.
 For ecosystem-wide selection and ownership guidance, see the versioned
 [Golib ecosystem index](https://github.com/faustbrian/go-library-tools/tree/v2.1.3/docs/ecosystem)
 and its
