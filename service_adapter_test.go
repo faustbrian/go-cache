@@ -47,6 +47,12 @@ var cacheLifecycleFactories = map[string]func(lifecycleOptions) (cacheLifecycle,
 
 type serviceContextKey struct{}
 
+// Exit codes when a transferred shutdown fails under parent cancellation belong
+// to go-service v3, which tests them at its Execute boundary
+// (TestOneShotCleanupFailureOverridesCancellationRacingTaskResult and
+// TestOneShotShutdownDeadlineUnderParentCancellationUsesExit124). This adapter
+// only has to return its Stop error unchanged, which
+// TestTransferredResourceShutsDownOnlyOnce pins in adapters/service.
 func TestServiceAdapterExecutesOneShotWithDefaultCorrelation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.WithValue(context.Background(), serviceContextKey{}, "caller"), 3*time.Second)
 	defer cancel()

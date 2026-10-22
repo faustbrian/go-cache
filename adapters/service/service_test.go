@@ -3,6 +3,7 @@ package cacheservice_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	cacheservice "github.com/faustbrian/go-cache/v4/adapters/service"
@@ -86,8 +87,8 @@ func TestReadinessIsExplicitAndRequiresAnActiveResource(t *testing.T) {
 
 func TestStartupFailureCleansTransferredResourceAndPreservesFailures(t *testing.T) {
 	value := &resource{}
-	startupErr := errors.New("startup failed")
-	cleanupErr := errors.New("cleanup failed")
+	startupErr := errors.New("dial tcp 10.0.0.5: connection refused")
+	cleanupErr := errors.New("NOAUTH secret-token rejected")
 	adapter, err := cacheservice.New(cacheservice.Options[*resource]{
 		Name:     "cache",
 		Resource: value,
@@ -107,6 +108,13 @@ func TestStartupFailureCleansTransferredResourceAndPreservesFailures(t *testing.
 	err = adapter.Component().Start(context.Background())
 	if !errors.Is(err, startupErr) || !errors.Is(err, cleanupErr) {
 		t.Fatalf("Start() error = %v, want startup and cleanup failures", err)
+	}
+	// Service renders this error, so it must stay categorical and never format
+	// the caller's validation or cleanup causes.
+	var startup *cacheservice.StartupError
+	if !errors.As(err, &startup) || err.Error() != "cache service startup validation and cleanup failed" ||
+		strings.Contains(err.Error(), startupErr.Error()) || strings.Contains(err.Error(), cleanupErr.Error()) {
+		t.Fatalf("Start() error text = %q, want the categorical startup message", err)
 	}
 	if value.stops != 1 {
 		t.Fatalf("Shutdown() calls = %d, want 1", value.stops)

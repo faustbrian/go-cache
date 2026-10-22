@@ -1,5 +1,3 @@
-//lint:file-ignore SA1019 Compatibility coverage requires deprecated imports.
-
 package cache_test
 
 import (
