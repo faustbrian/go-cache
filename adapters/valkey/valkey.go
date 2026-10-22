@@ -10,8 +10,8 @@ import (
 
 	valkeyclient "github.com/valkey-io/valkey-go"
 
-	cache "github.com/faustbrian/go-cache/v3"
-	"github.com/faustbrian/go-cache/v3/internal/wire"
+	cache "github.com/faustbrian/go-cache/v4"
+	"github.com/faustbrian/go-cache/v4/internal/wire"
 )
 
 const (

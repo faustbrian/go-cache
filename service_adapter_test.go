@@ -1,5 +1,3 @@
-//lint:file-ignore SA1019 Compatibility coverage requires the legacy adapter.
-
 package cache_test
 
 import (
@@ -12,12 +10,11 @@ import (
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/go-cache/v3"
-	cachememory "github.com/faustbrian/go-cache/v3/adapters/memory"
-	canonical "github.com/faustbrian/go-cache/v3/adapters/service"
-	legacy "github.com/faustbrian/go-cache/v3/cacheservice" //nolint:staticcheck // Preserve the supported legacy facade.
+	cache "github.com/faustbrian/go-cache/v4"
+	cachememory "github.com/faustbrian/go-cache/v4/adapters/memory"
+	canonical "github.com/faustbrian/go-cache/v4/adapters/service"
 	"github.com/faustbrian/go-correlation"
-	"github.com/faustbrian/go-service"
+	"github.com/faustbrian/go-service/v3"
 )
 
 type serviceResource struct {
@@ -42,12 +39,6 @@ type lifecycleOptions struct {
 var cacheLifecycleFactories = map[string]func(lifecycleOptions) (cacheLifecycle, error){
 	"canonical": func(o lifecycleOptions) (cacheLifecycle, error) {
 		return canonical.New(canonical.Options[*serviceResource]{
-			Name: "cache", Resource: o.resource, Startup: o.startup,
-			Readiness: o.readiness, Shutdown: o.shutdown,
-		})
-	},
-	"legacy": func(o lifecycleOptions) (cacheLifecycle, error) {
-		return legacy.New(legacy.Options[*serviceResource]{
 			Name: "cache", Resource: o.resource, Startup: o.startup,
 			Readiness: o.readiness, Shutdown: o.shutdown,
 		})

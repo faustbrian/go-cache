@@ -1,6 +1,6 @@
 //go:build integration
 
-package redis_test
+package cacheredis_test
 
 import (
 	"context"
@@ -15,9 +15,9 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	cache "github.com/faustbrian/go-cache/v3"
-	redisbackend "github.com/faustbrian/go-cache/v3/backend/redis"
-	"github.com/faustbrian/go-cache/v3/cachetest"
+	cache "github.com/faustbrian/go-cache/v4"
+	redisbackend "github.com/faustbrian/go-cache/v4/adapters/redis"
+	"github.com/faustbrian/go-cache/v4/cachetest"
 )
 
 func TestBackendConformance(t *testing.T) {

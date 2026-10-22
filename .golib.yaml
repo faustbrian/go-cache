@@ -16,7 +16,7 @@ api:
   baselines:
   - module: .
     mode: apidiff
-    path: api/v3-baseline.txt
+    path: api/v4-baseline.txt
 operations:
 - module: .
   gate: local-test
@@ -63,7 +63,7 @@ operations:
     budget: 10000x
     timeout: 2m
   - type: go-test
-    packages: ["./backend/memory"]
+    packages: ["./adapters/memory"]
     fuzz: '^FuzzBackendConformanceOperations$'
     budget: 10000x
     timeout: 2m

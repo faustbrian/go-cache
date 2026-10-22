@@ -1,4 +1,4 @@
-package slog_test
+package cacheslog_test
 
 import (
 	"bytes"
@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/go-cache/v3"
-	slogobserver "github.com/faustbrian/go-cache/v3/observability/slog"
+	cache "github.com/faustbrian/go-cache/v4"
+	slogobserver "github.com/faustbrian/go-cache/v4/adapters/slog"
 )
 
 func TestObserverLogsOnlyFixedRedactedAttributesByDefault(t *testing.T) {

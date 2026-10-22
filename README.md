@@ -51,8 +51,8 @@ import (
 	"fmt"
 	"time"
 
-	cache "github.com/faustbrian/go-cache/v3"
-	cachememory "github.com/faustbrian/go-cache/v3/adapters/memory"
+	cache "github.com/faustbrian/go-cache/v4"
+	cachememory "github.com/faustbrian/go-cache/v4/adapters/memory"
 )
 
 type User struct {
@@ -164,10 +164,9 @@ closes it. Providing `Shutdown` explicitly transfers close ownership. The
 adapter performs no retries, closes a transferred resource once after draining
 later-declared components, and preserves startup and partial-cleanup failures.
 
-The former `backend/*`, `cacheservice`, and `observability/*` import paths are
-deprecated compatibility facades. New code should use the corresponding
-`adapters/*` package; existing callers can migrate imports without changing
-configuration or runtime semantics.
+Version 4 removes the former `backend/*`, `cacheservice`, and
+`observability/*` import paths. Use the corresponding `adapters/*` package;
+configuration and runtime semantics are unchanged.
 
 ## Documentation
 

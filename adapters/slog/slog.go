@@ -5,7 +5,7 @@ import (
 	"fmt"
 	logslog "log/slog"
 
-	cache "github.com/faustbrian/go-cache/v3"
+	cache "github.com/faustbrian/go-cache/v4"
 )
 
 // Config selects the logger and level used by an Observer.

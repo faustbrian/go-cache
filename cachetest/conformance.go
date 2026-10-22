@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/go-cache/v3"
+	cache "github.com/faustbrian/go-cache/v4"
 )
 
 // BackendHarness supplies a backend and a deterministic way to make it

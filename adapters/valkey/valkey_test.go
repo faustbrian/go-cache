@@ -9,8 +9,8 @@ import (
 	valkeymock "github.com/valkey-io/valkey-go/mock"
 	"go.uber.org/mock/gomock"
 
-	cache "github.com/faustbrian/go-cache/v3"
-	cachevalkey "github.com/faustbrian/go-cache/v3/adapters/valkey"
+	cache "github.com/faustbrian/go-cache/v4"
+	cachevalkey "github.com/faustbrian/go-cache/v4/adapters/valkey"
 )
 
 func TestBackendRedactsClientDiagnostics(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/go-cache/v3"
+	cache "github.com/faustbrian/go-cache/v4"
 )
 
 type r17PanicEncoder struct{ value any }

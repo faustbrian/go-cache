@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	cache "github.com/faustbrian/go-cache/v3"
-	cachememory "github.com/faustbrian/go-cache/v3/adapters/memory"
+	cache "github.com/faustbrian/go-cache/v4"
+	cachememory "github.com/faustbrian/go-cache/v4/adapters/memory"
 )
 
 func ExampleCache_GetOrLoad() {

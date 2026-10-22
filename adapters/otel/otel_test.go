@@ -1,4 +1,4 @@
-package otel_test
+package cacheotel_test
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
-	cache "github.com/faustbrian/go-cache/v3"
-	otelobserver "github.com/faustbrian/go-cache/v3/observability/otel"
+	cache "github.com/faustbrian/go-cache/v4"
+	otelobserver "github.com/faustbrian/go-cache/v4/adapters/otel"
 )
 
 func TestObserverRecordsRedactedLowCardinalityMetrics(t *testing.T) {

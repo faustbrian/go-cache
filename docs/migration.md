@@ -2,6 +2,15 @@
 
 [Documentation index](README.md) · [Repository entry](../README.md)
 
+## From v3 to v4
+
+Version 4 moves the root and every subpackage to
+`github.com/faustbrian/go-cache/v4` and binds `adapters/service` to
+`github.com/faustbrian/go-service/v3`; move the service definition to Service
+v3 in the same change. The deprecated `backend/*`, `cacheservice` and
+`observability/*` paths are removed: replace them with the `adapters/*` paths
+in the table below. Configuration and runtime semantics are unchanged.
+
 ## From v2 to v3
 
 Version 3 adopts go-redis v9.22.0. The root and every cache subpackage move
@@ -111,12 +120,12 @@ guarantee that already-admitted backend side effects have stopped; successful
 
 ## To canonical adapter paths
 
-New integrations use the canonical `adapters/*` paths. Existing integrations
-can migrate imports independently; configuration, exported method behavior,
-error classification, resource ownership, lifecycle order, redaction, and
-backend wire semantics are unchanged.
+Version 4 removes the deprecated paths. Replace each import with its canonical
+`adapters/*` package; configuration, exported method behavior, error
+classification, resource ownership, lifecycle order, redaction, and backend
+wire semantics are unchanged.
 
-| Deprecated path | Canonical replacement |
+| Removed path | Canonical replacement |
 | --- | --- |
 | `backend/memory` | `adapters/memory` |
 | `backend/redis` | `adapters/redis` |
@@ -124,11 +133,6 @@ backend wire semantics are unchanged.
 | `cacheservice` | `adapters/service` |
 | `observability/otel` | `adapters/otel` |
 | `observability/slog` | `adapters/slog` |
-
-The deprecated packages retain their own named Go type identities and delegate
-to the canonical implementations. They remain supported for the longer of 180
-days after the canonical successor release and two subsequently published
-stable root-module minor releases.
 
 ## Release upgrades
 

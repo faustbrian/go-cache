@@ -23,7 +23,7 @@ backend, err := cachememory.New(cachememory.Config{
 })
 ```
 
-Import this adapter as `github.com/faustbrian/go-cache/v3/adapters/memory`.
+Import this adapter as `github.com/faustbrian/go-cache/v4/adapters/memory`.
 
 It is process-local and makes no durability or cross-process consistency claim.
 
@@ -39,7 +39,7 @@ backend, err := cacheredis.New(cacheredis.Config{
 })
 ```
 
-Import this adapter as `github.com/faustbrian/go-cache/v3/adapters/redis`.
+Import this adapter as `github.com/faustbrian/go-cache/v4/adapters/redis`.
 
 The adapter bounds reads server-side before retrieving bytes, stores one
 versioned record envelope, applies `NX`/`XX` atomically, and sets server expiry
@@ -62,7 +62,7 @@ backend, err := cachevalkey.New(cachevalkey.Config{
 })
 ```
 
-Import this adapter as `github.com/faustbrian/go-cache/v3/adapters/valkey`.
+Import this adapter as `github.com/faustbrian/go-cache/v4/adapters/valkey`.
 
 The Valkey adapter uses valkey-go's command builder and binary-safe values. Its
 wire and conditional semantics match the Redis adapter, including the relative

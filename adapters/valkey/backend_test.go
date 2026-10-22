@@ -1,4 +1,4 @@
-package valkey_test
+package cachevalkey_test
 
 import (
 	"errors"
@@ -7,8 +7,8 @@ import (
 	valkeymock "github.com/valkey-io/valkey-go/mock"
 	"go.uber.org/mock/gomock"
 
-	cache "github.com/faustbrian/go-cache/v3"
-	valkeybackend "github.com/faustbrian/go-cache/v3/backend/valkey"
+	cache "github.com/faustbrian/go-cache/v4"
+	valkeybackend "github.com/faustbrian/go-cache/v4/adapters/valkey"
 )
 
 func TestNewRejectsInvalidConfiguration(t *testing.T) {

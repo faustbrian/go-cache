@@ -10,8 +10,8 @@ import (
 
 	redisclient "github.com/redis/go-redis/v9"
 
-	cache "github.com/faustbrian/go-cache/v3"
-	cacheredis "github.com/faustbrian/go-cache/v3/adapters/redis"
+	cache "github.com/faustbrian/go-cache/v4"
+	cacheredis "github.com/faustbrian/go-cache/v4/adapters/redis"
 )
 
 func TestBackendRedactsClientDiagnostics(t *testing.T) {

@@ -1,11 +1,11 @@
-package memory_test
+package cachememory_test
 
 import (
 	"testing"
 	"time"
 
-	cache "github.com/faustbrian/go-cache/v3"
-	"github.com/faustbrian/go-cache/v3/backend/memory"
+	cache "github.com/faustbrian/go-cache/v4"
+	memory "github.com/faustbrian/go-cache/v4/adapters/memory"
 )
 
 func FuzzBackendConformanceOperations(f *testing.F) {

@@ -1,63 +1,68 @@
 //go:build integration
 
-package redis_test
+package cachevalkey_test
 
 import (
 	"os"
-	"strings"
 	"testing"
 	"time"
 
-	redisclient "github.com/redis/go-redis/v9"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+	valkeyclient "github.com/valkey-io/valkey-go"
 
-	cache "github.com/faustbrian/go-cache/v3"
-	redisbackend "github.com/faustbrian/go-cache/v3/backend/redis"
-	"github.com/faustbrian/go-cache/v3/internal/integrationtest"
+	cache "github.com/faustbrian/go-cache/v4"
+	valkeybackend "github.com/faustbrian/go-cache/v4/adapters/valkey"
+	"github.com/faustbrian/go-cache/v4/internal/integrationtest"
 )
 
-const redisTestPassword = "integration-only-password"
+const valkeyTestPassword = "integration-only-password"
 
 func TestBackendAuthentication(t *testing.T) {
-	container, endpoint := startSecuredRedis(t, nil)
+	container, endpoint := startSecuredValkey(t, nil)
 	testcontainers.CleanupContainer(t, container)
 
-	unauthorized := redisclient.NewClient(&redisclient.Options{Addr: endpoint, MaxRetries: -1})
-	t.Cleanup(func() { _ = unauthorized.Close() })
-	if err := unauthorized.Ping(t.Context()).Err(); err == nil {
-		t.Fatal("server accepted unauthenticated client")
-	} else if !strings.Contains(err.Error(), "NOAUTH") {
-		t.Fatalf("unauthenticated probe did not reach Redis: %v", err)
+	unauthorized, err := valkeyclient.NewClient(valkeyclient.ClientOption{InitAddress: []string{endpoint}})
+	if err == nil {
+		t.Cleanup(unauthorized.Close)
+		if err := unauthorized.Do(t.Context(), unauthorized.B().Ping().Build()).Error(); err == nil {
+			t.Fatal("server accepted unauthenticated client")
+		}
 	}
 
-	client := redisclient.NewClient(&redisclient.Options{
-		Addr: endpoint, Password: redisTestPassword, MaxRetries: -1,
+	client, err := valkeyclient.NewClient(valkeyclient.ClientOption{
+		InitAddress: []string{endpoint}, Password: valkeyTestPassword,
 	})
-	t.Cleanup(func() { _ = client.Close() })
-	assertRedisRoundTrip(t, client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(client.Close)
+	assertValkeyRoundTrip(t, client)
 }
 
 func TestBackendTLSAndAuthentication(t *testing.T) {
 	material := integrationtest.NewTLSMaterial(t)
-	container, endpoint := startSecuredRedis(t, &material)
+	container, endpoint := startSecuredValkey(t, &material)
 	testcontainers.CleanupContainer(t, container)
 
-	client := redisclient.NewClient(&redisclient.Options{
-		Addr: endpoint, Password: redisTestPassword, TLSConfig: material.ClientConfig, MaxRetries: -1,
+	client, err := valkeyclient.NewClient(valkeyclient.ClientOption{
+		InitAddress: []string{endpoint}, Password: valkeyTestPassword, TLSConfig: material.ClientConfig,
 	})
-	t.Cleanup(func() { _ = client.Close() })
-	assertRedisRoundTrip(t, client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(client.Close)
+	assertValkeyRoundTrip(t, client)
 }
 
-func startSecuredRedis(
+func startSecuredValkey(
 	t *testing.T,
 	material *integrationtest.TLSMaterial,
 ) (testcontainers.Container, string) {
 	t.Helper()
-	image := os.Getenv("CACHE_REDIS_IMAGE")
+	image := os.Getenv("CACHE_VALKEY_IMAGE")
 	if image == "" {
-		image = "redis:8.0"
+		image = "valkey/valkey:9.0"
 	}
 	request := testcontainers.ContainerRequest{
 		Image:        image,
@@ -67,7 +72,7 @@ func startSecuredRedis(
 			wait.ForLog("Ready to accept connections"),
 		),
 		Cmd: []string{
-			"redis-server", "--requirepass", redisTestPassword,
+			"valkey-server", "--requirepass", valkeyTestPassword,
 		},
 	}
 	if material != nil {
@@ -79,6 +84,19 @@ func startSecuredRedis(
 			"--tls-key-file", "/tls/server.key",
 			"--tls-ca-cert-file", "/tls/ca.crt",
 			"--tls-auth-clients", "no",
+		)
+		request.WaitingFor = wait.ForAll(
+			wait.ForListeningPort("6379/tcp"),
+			wait.ForLog("Ready to accept connections"),
+			wait.ForExec([]string{
+				"valkey-cli",
+				"--tls",
+				"--cacert", "/tls/ca.crt",
+				"--sni", "cache.test",
+				"-a", valkeyTestPassword,
+				"-e",
+				"PING",
+			}),
 		)
 	}
 	container, err := testcontainers.GenericContainer(t.Context(), testcontainers.GenericContainerRequest{
@@ -95,9 +113,9 @@ func startSecuredRedis(
 	return container, endpoint
 }
 
-func assertRedisRoundTrip(t *testing.T, client *redisclient.Client) {
+func assertValkeyRoundTrip(t *testing.T, client valkeyclient.Client) {
 	t.Helper()
-	backend, err := redisbackend.New(redisbackend.Config{
+	backend, err := valkeybackend.New(valkeybackend.Config{
 		Client: client, Clock: cache.SystemClock{}, MaxRecordSize: 128,
 	})
 	if err != nil {

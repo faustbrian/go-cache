@@ -3,14 +3,29 @@
 All notable changes are documented here. The project follows Semantic
 Versioning and keeps an Unreleased section at the top.
 
-## Unreleased
+## [Unreleased]
+
+## [4.0.0] - 2026-10-22
+
+### Changed
+
+- Move the module to `github.com/faustbrian/go-cache/v4` and bind
+  `adapters/service` to `github.com/faustbrian/go-service/v3`, so
+  `Adapter.Component()` and `Readiness()` return Service v3 types.
+
+### Removed
+
+- Remove the deprecated `backend/memory`, `backend/redis`, `backend/valkey`,
+  `cacheservice`, `observability/otel` and `observability/slog` compatibility
+  paths. Import the matching `adapters/*` package; configuration and runtime
+  semantics are unchanged.
+
+## [3.0.0] - 2026-10-22
 
 ### Security
 
 - Build with Go 1.27.3 to address GO-2026-6809 in `crypto/x509`.
   Consumers should use Go 1.27.3 or newer.
-
-## [Unreleased]
 
 ### Changed
 

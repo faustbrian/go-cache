@@ -1,6 +1,6 @@
 //go:build integration
 
-package valkey_test
+package cachevalkey_test
 
 import (
 	"context"
@@ -15,9 +15,9 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 	valkeyclient "github.com/valkey-io/valkey-go"
 
-	cache "github.com/faustbrian/go-cache/v3"
-	valkeybackend "github.com/faustbrian/go-cache/v3/backend/valkey"
-	"github.com/faustbrian/go-cache/v3/cachetest"
+	cache "github.com/faustbrian/go-cache/v4"
+	valkeybackend "github.com/faustbrian/go-cache/v4/adapters/valkey"
+	"github.com/faustbrian/go-cache/v4/cachetest"
 )
 
 func TestBackendConformance(t *testing.T) {

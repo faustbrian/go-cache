@@ -1,9 +1,9 @@
-package memory_test
+package cachememory_test
 
 import (
 	"testing"
 
-	"github.com/faustbrian/go-cache/v3/cachetest"
+	"github.com/faustbrian/go-cache/v4/cachetest"
 )
 
 func TestBackendConformance(t *testing.T) {

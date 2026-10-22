@@ -18,7 +18,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/faustbrian/go-service"
+	"github.com/faustbrian/go-service/v3"
 )
 
 var (
