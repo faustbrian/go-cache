@@ -18,9 +18,10 @@ migration notes. Starting with `v1`, SemVer applies to:
 - portable deadlines and their wall-clock interpretation;
 - metric names, units, and label sets.
 
-The immutable released-v1 and released-v2 API snapshots are retained at
-`api/v1-baseline.txt` and `api/v2-baseline.txt`. The active v3 source is checked
-against `api/v3-baseline.txt`; each major has an independent baseline because
+The immutable released-v1, released-v2 and released-v3 API snapshots are
+retained at `api/v1-baseline.txt`, `api/v2-baseline.txt` and
+`api/v3-baseline.txt`. The active v4 source is checked against
+`api/v4-baseline.txt`; each major has an independent baseline because
 its documented incompatible contracts have a distinct module identity.
 Version 3 retains the Redis configuration's SDK `UniversalClient` type while
 adopting its expanded v9.22 method set. This changes the accepted custom-client

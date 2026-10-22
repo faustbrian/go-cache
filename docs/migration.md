@@ -11,6 +11,13 @@ v3 in the same change. The deprecated `backend/*`, `cacheservice` and
 `observability/*` paths are removed: replace them with the `adapters/*` paths
 in the table below. Configuration and runtime semantics are unchanged.
 
+This removes those paths before the 180-day window announced in their
+deprecation notices: the owned consumers move to the `adapters/*` paths with
+this release, and keeping parallel facades would leave two supported
+identities for the same backends. Under the security policy, v4 supersedes
+v3, so applications still importing the removed paths should migrate rather
+than wait for v3 fixes.
+
 ## From v2 to v3
 
 Version 3 adopts go-redis v9.22.0. The root and every cache subpackage move
@@ -26,7 +33,8 @@ Both `adapters/redis.Config.Client` and `backend/redis.Config.Client` retain
 Native v9.22 clients satisfy the new contract. Custom clients must implement
 all methods in the v9.22 interface; compiling against an older SDK is not
 sufficient. Values read from either configuration field remain assignable
-back to the SDK interface. The deprecated Redis facade remains supported.
+back to the SDK interface. The deprecated Redis facade remained supported in
+v3 and is removed in v4.
 
 Review application-owned client options: default read/write timeouts change
 from three to five seconds, derived pool timeout from four to six seconds,

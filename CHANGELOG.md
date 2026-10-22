@@ -18,7 +18,14 @@ Versioning and keeps an Unreleased section at the top.
 - Remove the deprecated `backend/memory`, `backend/redis`, `backend/valkey`,
   `cacheservice`, `observability/otel` and `observability/slog` compatibility
   paths. Import the matching `adapters/*` package; configuration and runtime
-  semantics are unchanged.
+  semantics are unchanged. This removal precedes the 180-day window announced
+  in the deprecation notices; v4 supersedes v3 under the security policy, so
+  migrate instead of waiting for v3 fixes.
+
+### Maintenance
+
+- Raise the OpenTelemetry API and metric API minimums from 1.45.0 to 1.46.0,
+  selected by Service v3.
 
 ## [3.0.0] - 2026-10-22
 

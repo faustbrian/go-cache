@@ -5,7 +5,7 @@
 [![Coverage](https://img.shields.io/badge/coverage-risk_selected-blue)](CONTRIBUTING.md#verification)
 [![Mutation](https://img.shields.io/badge/mutation-optional_local%2Fselected_scheduled-blue)](CONTRIBUTING.md#verification)
 [![Documentation](https://img.shields.io/badge/docs-checked_in_CI-blue)](docs/)
-[![Go Reference](https://pkg.go.dev/badge/github.com/faustbrian/go-cache/v2.svg)](https://pkg.go.dev/github.com/faustbrian/go-cache/v2)
+[![Go Reference](https://pkg.go.dev/badge/github.com/faustbrian/go-cache/v4.svg)](https://pkg.go.dev/github.com/faustbrian/go-cache/v4)
 [![Release](https://img.shields.io/github/v/release/faustbrian/go-cache?sort=semver)](https://github.com/faustbrian/go-cache/releases)
 [![Go](https://img.shields.io/badge/go-1.27.0-00ADD8?logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -31,17 +31,12 @@ and its
 ## Install
 
 ```sh
-go get github.com/faustbrian/go-cache/v2@v2.0.0
+go get github.com/faustbrian/go-cache/v4@v4.0.0
 ```
 
 Go 1.27.0 or newer is required.
 
-## Unreleased v3 source quickstart
-
-The unchanged example below describes the current `/v3` source, not an
-installable release. For a complete released example and `/v2` imports, use
-the [v2.0.0 README](https://github.com/faustbrian/go-cache/blob/v2.0.0/README.md).
-Do not use a local replacement as a public installation workaround.
+## Quickstart
 
 ```go
 package main
@@ -106,12 +101,12 @@ func main() {
 }
 ```
 
-## V3 adoption
+## Adopting v4
 
-V3 is not published. Use the v2.0.0 installation above and its versioned
-quickstart for released applications. The [migration guide](docs/migration.md)
-records the proposed v3 boundary; do not change production dependencies or
-substitute local source for a public release.
+V4 is the current major; v3.0.0 and v2.0.0 remain published. The
+[migration guide](docs/migration.md) covers each major boundary, including the
+v4 removal of the deprecated `backend/*`, `cacheservice` and `observability/*`
+paths.
 
 Always inspect `Result.State`; a stored zero value can be a `Hit`. A miss is not
 an error. Backend, decoding, schema, policy, limit, and loader failures remain

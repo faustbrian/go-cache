@@ -4,10 +4,8 @@
 
 Security fixes are provided for the latest published stable major/minor line.
 Publication of a new stable major supersedes the previous major; breaking
-security fixes are not backported. Until v2 is published, v1 remains the latest
-published line. The v2.0.0 release candidate adds protected-error,
-bounded-shutdown and bounded-flight contracts; confirm public v2 resolution
-and follow `docs/migration.md` to adopt them.
+security fixes are not backported. V4 is the current major; follow
+`docs/migration.md` to adopt it.
 
 ## Reporting
 
