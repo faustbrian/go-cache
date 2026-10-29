@@ -28,6 +28,11 @@ type LoadResult[V any] struct {
 	Value V
 	// Found distinguishes a present zero/nil value from authoritative absence.
 	Found bool
+	// Expiry optionally replaces the fresh TTL and jitter (found) or NegativeTTL
+	// (absent) for this entry; zero keeps the cache policy. A non-zero Expiry on
+	// an absent result is stored even when NegativeTTL is zero. A passed
+	// deadline deletes the key; waiters still receive this result.
+	Expiry Expiry
 }
 
 // Loader fetches a logical key from its source of truth. It receives a
@@ -63,7 +68,8 @@ type LoadPolicy struct {
 	MaxFlights int
 	// MaxWaitersPerKey bounds attached foreground callers per flight; zero selects 1024.
 	MaxWaitersPerKey int
-	// NegativeTTL is absence retention; zero disables storage of negative load results.
+	// NegativeTTL is absence retention; zero disables storage of negative load
+	// results unless the loader returns a non-zero LoadResult.Expiry.
 	NegativeTTL time.Duration
 	// StaleWhileRevalidate serves stale data and admits a shared background refresh.
 	StaleWhileRevalidate bool
@@ -489,28 +495,25 @@ func (c *Cache[K, V]) runLoad(key string, logical K, loader Loader[K, V], flight
 		return
 	}
 	defer flight.mutation.Unlock()
+	if !loaded.Expiry.IsZero() {
+		staleFor := time.Duration(0)
+		if loaded.Found {
+			staleFor = c.ttl.StaleFor
+		}
+		if _, _, _, err := loaded.Expiry.deadlines(OperationLoad, c.clock.Now().Round(0), staleFor, c.ttl.Sliding); err != nil {
+			flight.err = err
+			return
+		}
+	}
 	if !loaded.Found {
 		loadOutcome = OutcomeNegative
 		flight.result = Result[V]{State: Miss, Negative: true}
-		if cmp.Compare(c.load.NegativeTTL, 0) == 1 {
-			now := c.clock.Now().Round(0)
-			record := Record{
-				ExpiresAt: now.Add(c.load.NegativeTTL),
-				StaleAt:   now.Add(c.load.NegativeTTL),
-				Negative:  true,
-			}
-			if err := record.Validate(); err != nil {
-				flight.err = err
-				return
-			}
-			_, err := c.backend.Set(c.loadCtx, key, record, Unconditional)
-			if err != nil {
-				flight.err = operationError(OperationSet, err)
-			}
+		if err := c.setLoadedNegative(key, loaded.Expiry); err != nil {
+			flight.err = err
 		}
 		return
 	}
-	if err := c.setLoaded(c.loadCtx, logical, loaded.Value); err != nil {
+	if err := c.setLoaded(c.loadCtx, logical, loaded.Value, loaded.Expiry); err != nil {
 		flight.err = err
 		return
 	}
@@ -616,7 +619,19 @@ func (c *Cache[K, V]) isClosed() bool {
 
 // Set writes a value without an existence precondition.
 func (c *Cache[K, V]) Set(ctx context.Context, logical K, value V) error {
-	_, err := c.set(ctx, logical, value, Unconditional, c.ttl.TTL, true)
+	_, err := c.set(ctx, logical, value, Unconditional, c.ttl.TTL, Expiry{}, true)
+	return err
+}
+
+// SetWithExpiry writes a value without an existence precondition using a
+// per-entry expiry. A zero Expiry behaves exactly like Set. An absolute
+// deadline replaces the policy TTL while the configured StaleFor still follows
+// it; NeverExpire ignores both. A deadline at or before the cache clock deletes
+// the key instead of storing an expired value and still supersedes an active
+// load. Non-zero expiries are rejected with ErrInvalidPolicy when the TTL
+// policy is Sliding, because a sliding hit would replace the explicit deadline.
+func (c *Cache[K, V]) SetWithExpiry(ctx context.Context, logical K, value V, expiry Expiry) error {
+	_, err := c.set(ctx, logical, value, Unconditional, c.ttl.TTL, expiry, true)
 	return err
 }
 
@@ -731,16 +746,20 @@ func (c *Cache[K, V]) setIfOwned(
 
 // Add writes a value only when the key has no live record.
 func (c *Cache[K, V]) Add(ctx context.Context, logical K, value V) (bool, error) {
-	return c.set(ctx, logical, value, IfAbsent, c.ttl.TTL, true)
+	return c.set(ctx, logical, value, IfAbsent, c.ttl.TTL, Expiry{}, true)
 }
 
 // Replace writes a value only when the key has a live record.
 func (c *Cache[K, V]) Replace(ctx context.Context, logical K, value V) (bool, error) {
-	return c.set(ctx, logical, value, IfPresent, c.ttl.TTL, true)
+	return c.set(ctx, logical, value, IfPresent, c.ttl.TTL, Expiry{}, true)
 }
 
-func (c *Cache[K, V]) setLoaded(ctx context.Context, logical K, value V) error {
+func (c *Cache[K, V]) setLoaded(ctx context.Context, logical K, value V, expiry Expiry) error {
 	ttl := c.ttl.TTL
+	if !expiry.IsZero() {
+		_, err := c.set(ctx, logical, value, Unconditional, ttl, expiry, false)
+		return err
+	}
 	if c.load.RefreshJitter > 0 {
 		jitter := c.jitter.Duration(c.load.RefreshJitter)
 		if slices.Contains([]bool{
@@ -752,8 +771,40 @@ func (c *Cache[K, V]) setLoaded(ctx context.Context, logical K, value V) error {
 		}
 		ttl -= jitter
 	}
-	_, err := c.set(ctx, logical, value, Unconditional, ttl, false)
+	_, err := c.set(ctx, logical, value, Unconditional, ttl, Expiry{}, false)
 	return err
+}
+
+// setLoadedNegative runs under the flight's mutation lock, like setLoaded.
+func (c *Cache[K, V]) setLoadedNegative(key string, expiry Expiry) error {
+	now := c.clock.Now().Round(0)
+	record := Record{Negative: true}
+	switch {
+	case !expiry.IsZero():
+		expiresAt, _, live, err := expiry.deadlines(OperationLoad, now, 0, c.ttl.Sliding)
+		if err != nil {
+			return err
+		}
+		if !live {
+			if _, err := c.backend.Delete(c.loadCtx, key); err != nil {
+				return operationError(OperationDelete, err)
+			}
+			return nil
+		}
+		record.ExpiresAt, record.StaleAt = expiresAt, expiresAt
+	case c.load.NegativeTTL > 0:
+		record.ExpiresAt = now.Add(c.load.NegativeTTL)
+		record.StaleAt = record.ExpiresAt
+	default:
+		return nil
+	}
+	if err := record.Validate(); err != nil {
+		return err
+	}
+	if _, err := c.backend.Set(c.loadCtx, key, record, Unconditional); err != nil {
+		return operationError(OperationSet, err)
+	}
+	return nil
 }
 
 func (c *Cache[K, V]) set(
@@ -762,6 +813,7 @@ func (c *Cache[K, V]) set(
 	value V,
 	condition Condition,
 	ttl time.Duration,
+	expiry Expiry,
 	supersede bool,
 ) (written bool, err error) {
 	start := c.clock.Now()
@@ -807,6 +859,26 @@ func (c *Cache[K, V]) set(
 		Payload:   payload,
 		ExpiresAt: now.Add(ttl),
 		StaleAt:   now.Add(ttl).Add(c.ttl.StaleFor),
+	}
+	if !expiry.IsZero() {
+		expiresAt, staleAt, live, err := expiry.deadlines(OperationSet, now, c.ttl.StaleFor, c.ttl.Sliding)
+		if err != nil {
+			return false, err
+		}
+		if !live {
+			// Only unconditional writes carry an expiry; an already expired write
+			// must still remove the previous value, as a provider-side past
+			// deadline would. Nothing is stored, so no payload size is observed.
+			size = 0
+			if _, err := c.backend.Delete(ctx, key); err != nil {
+				return false, operationError(OperationDelete, err)
+			}
+			if flight != nil {
+				flight.superseded = true
+			}
+			return true, nil
+		}
+		record.ExpiresAt, record.StaleAt = expiresAt, staleAt
 	}
 	if err := record.Validate(); err != nil {
 		return false, err

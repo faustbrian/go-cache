@@ -48,6 +48,17 @@ Sliding TTL extends a fresh record on each successful hit using atomic
 record warm. Avoid it for data that must be periodically revalidated regardless
 of traffic. Sliding TTL does not extend stale records.
 
+## Per-entry expiry
+
+Return `LoadResult.Expiry` or call `SetWithExpiry` when the source defines
+when a value stops being fresh, such as a calendar boundary. `ExpireAt` ends
+freshness, not usability: a positive entry remains readable as `Stale` for
+`StaleFor` afterwards. When the deadline must be hard, such as a credential
+lifetime, configure `StaleFor` as zero. Use `NeverExpire` only for values that
+stay valid until an explicit mutation, and rely on a bounded backend to cap
+them. An explicit expiry replaces jitter, so entries sharing one deadline also
+expire together. Sliding TTL rejects explicit expiries.
+
 ## Jitter
 
 Set `RefreshJitter` below the positive TTL to spread loaded-value expirations.

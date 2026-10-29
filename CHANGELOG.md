@@ -5,6 +5,15 @@ Versioning and keeps an Unreleased section at the top.
 
 ## [Unreleased]
 
+### Added
+
+- Add per-entry expiry. `LoadResult.Expiry` and `SetWithExpiry` accept
+  `ExpireAt(deadline)` or `NeverExpire()`. A non-zero expiry replaces the
+  fresh TTL, jitter and `NegativeTTL` for that entry. `StaleFor` still follows
+  an absolute deadline. A passed deadline deletes the key, and Sliding TTL
+  rejects explicit expiries. The zero `Expiry` keeps existing fixed-TTL
+  behavior unchanged.
+
 ## [4.0.0] - 2026-10-22
 
 ### Changed
