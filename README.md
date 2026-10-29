@@ -31,7 +31,7 @@ and its
 ## Install
 
 ```sh
-go get github.com/faustbrian/go-cache/v4@v4.1.0
+go get github.com/faustbrian/go-cache/v4@v4.2.0
 ```
 
 Go 1.27.0 or newer is required.
