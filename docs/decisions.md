@@ -59,6 +59,22 @@ stay valid until an explicit mutation, and rely on a bounded backend to cap
 them. An explicit expiry replaces jitter, so entries sharing one deadline also
 expire together. Sliding TTL rejects explicit expiries.
 
+## Load timeout
+
+Set `Timeout` when one source call must not hold a shared flight longer than
+a known bound, for example a carrier API with a published latency budget.
+Caller deadlines never bound shared loads, so without it only the loader's own
+client timeouts and `Close` stop a slow source. Loaders still have to honor
+the context; the cache does not abandon a loader that ignores it.
+
+## Inherited context values
+
+Enable `InheritValues` when loaders need the request's correlation or trace
+values for logging and propagation. Only the caller that admitted the flight
+contributes values, so joiners and later readers can see work attributed to
+another request. Never derive the loaded result from inherited values; put
+tenant, principal or locale in the key instead.
+
 ## Jitter
 
 Set `RefreshJitter` below the positive TTL to spread loaded-value expirations.

@@ -65,7 +65,11 @@ renew, or release leases.
 
 `GetOrLoad` first performs `Get`, then joins or creates one in-process flight
 per backend key. Flights receive a cache-owned Background-derived context,
-not the first caller's values/deadline. A published found load shares the
+never a caller's cancellation or deadline. `LoadPolicy.InheritValues` exposes
+the admitting caller's context values to the loader (joiners' values are not
+visible), and `LoadPolicy.Timeout` bounds each loader call; a loader error after
+that bound matches `ErrLoader` and `ErrLoadTimeout`. See
+[concurrency](concurrency.md) for refresh, shutdown and recursion details. A published found load shares the
 loader's original V among waiters without deep copies. Double checks or
 superseding mutations can instead return the current decoded state. The loader
 returns `LoadResult[V]{Found:false}` for an authoritative absence. A loader error is not absence and matches `ErrLoader`.
@@ -149,8 +153,8 @@ Use `errors.Is`, not string matching. Important sentinels are:
 - `ErrInvalidKey`, `ErrKeyTooLarge`, and `ErrValueTooLarge`;
 - `ErrInvalidTTL`, `ErrInvalidPolicy`, `ErrInvalidConfig`, and
   `ErrInvalidRecord`;
-- `ErrLoader`, `ErrLoaderPanic`, `ErrRecursiveLoad`, `ErrWaiterLimit`, and
-  `ErrFlightLimit`;
+- `ErrLoader`, `ErrLoaderPanic`, `ErrLoadTimeout`, `ErrRecursiveLoad`,
+  `ErrWaiterLimit`, and `ErrFlightLimit`;
 - `ErrCapacity`, `ErrBatchTooLarge`, `ErrClosed`, and
   `ErrShutdownIncomplete`;
 - `ErrOwnershipLost` and `ErrOwnershipUnsupported`.

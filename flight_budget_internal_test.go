@@ -144,7 +144,7 @@ func TestFlightAdmissionIncludesDetachedCleanupWork(t *testing.T) {
 	// active count. Admission must honor the work still in that cleanup window.
 	store.loadMu.Lock()
 	store.activeLoads = 1
-	flight, err := store.admitFlightLocked("new", "new", nil, 1)
+	flight, err := store.admitFlightLocked(t.Context(), "new", "new", nil, 1)
 	retained := len(store.flights)
 	store.activeLoads-- // Release only the simulated detached cleanup work.
 	store.loadMu.Unlock()

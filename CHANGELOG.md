@@ -5,6 +5,16 @@ Versioning and keeps an Unreleased section at the top.
 
 ## [Unreleased]
 
+### Added
+
+- Add opt-in `LoadPolicy.InheritValues` and `LoadPolicy.Timeout`.
+  `InheritValues` exposes the context values of the caller that admitted a
+  flight, or the stale reader that started a background refresh, to the
+  loader. Joiners' values are not visible, and caller cancellation and
+  deadlines still never reach shared loads. `Timeout` bounds each loader
+  call; a loader error after the bound matches `ErrLoader` and the new
+  `ErrLoadTimeout`. Zero values keep existing behavior.
+
 ## [4.1.0] - 2026-10-29
 
 ### Added

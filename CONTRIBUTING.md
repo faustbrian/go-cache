@@ -61,9 +61,10 @@ make ci
 `check` and `ci` use bounded local checks, including the named race assertions
 in `.golib.yaml` for loader coalescing, caller-cancellation isolation, queued-load
 cancellation, caller-bounded shutdown, prevention of late publication and
-per-entry expiry writes racing loads.
-The focused race operation runs once with a two-minute timeout, not a broad
-stress campaign. CI consumes the checksum-pinned public Tools binary without
+per-entry expiry writes racing loads, and load-context inheritance, timeout
+and shutdown classification.
+The focused race operation runs two steps once each, with two-minute and
+one-minute timeouts, not a broad stress campaign. CI consumes the checksum-pinned public Tools binary without
 an ordinary verifier source build.
 
 The root manifest still declares Redis and Valkey services and `integration`
