@@ -23,8 +23,37 @@ the same budget and return the existing stale value with the rejection error.
 Each caller waits with its own context. Cancellation detaches only that waiter.
 The loader receives a cache-owned context so one impatient caller cannot cancel
 work needed by others. Even the last waiter's cancellation does not stop the
-flight. Caller context values and deadlines are not copied into load context.
-`Close` cancels that shared context, prevents new
+flight. Caller deadlines and cancellation are never copied into the load
+context, and caller values are not copied by default.
+
+Two opt-in `LoadPolicy` fields change only what the loader context carries:
+
+- `InheritValues` lets the loader read the context values of the caller that
+  admitted the flight: the first `GetOrLoad` caller for a key, or the stale
+  reader that started a stale-while-revalidate refresh. Callers that join an
+  existing flight contribute nothing. The values come from
+  `context.WithoutCancel`, so the leader's cancellation and deadline still
+  cannot stop shared work. The cache keeps that context until the flight
+  finishes. Use inherited values only for diagnostics such as correlation and
+  tracing. Every waiter shares the result and later readers get it from the
+  backend, so a tenant, principal or locale that changes the result belongs
+  in the key.
+- `Timeout` bounds each loader call from the moment it acquires a loader slot.
+  A loader error returned after expiry matches `ErrLoader` and
+  `ErrLoadTimeout` and keeps the loader's own cause recognizable through
+  `errors.Is`, including `context.DeadlineExceeded` when the loader returns
+  its context error. Check `ErrLoadTimeout` before treating
+  `context.DeadlineExceeded` as the caller's own deadline. A loader's own
+  shorter deadline is not reported as a timeout, and neither is a `Close` or
+  `Shutdown` that cancels the load first. A loader that ignores cancellation
+  is not abandoned; a late success is published.
+
+Recursive-load detection keeps working with both options: the loader context
+marker is applied last, so an inherited context from another cache's loader
+cannot hide it. Neither option changes flight admission, waiter limits or
+mutation precedence.
+
+`Close` cancels the cache-owned load context, prevents new
 flights, waits up to five seconds for active goroutines, and is idempotent.
 `Shutdown` accepts a caller-owned context when another deadline is required.
 

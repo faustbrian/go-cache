@@ -32,6 +32,8 @@ var (
 	ErrLoader = errors.New("cache loader error")
 	// ErrLoaderPanic identifies a recovered loader panic.
 	ErrLoaderPanic = errors.New("cache loader panic")
+	// ErrLoadTimeout identifies a loader failure after LoadPolicy.Timeout expired.
+	ErrLoadTimeout = errors.New("cache load timeout")
 	// ErrRecursiveLoad identifies a loader re-entering the same cache.
 	ErrRecursiveLoad = errors.New("recursive cache load")
 	// ErrWaiterLimit identifies excess callers for one active key flight.

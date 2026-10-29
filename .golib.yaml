@@ -27,6 +27,12 @@ operations:
     race: true
     count: 1
     timeout: 2m
+  - type: go-test
+    packages: ["."]
+    run: '^TestLoadContext[A-Za-z]+$'
+    race: true
+    count: 1
+    timeout: 1m
 - module: .
   gate: docs
   steps:

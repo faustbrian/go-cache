@@ -36,9 +36,11 @@ type LoadResult[V any] struct {
 }
 
 // Loader fetches a logical key from its source of truth. It receives a
-// cache-owned context, not the first waiter's context/values/deadline. Honor its
-// cancellation and bound external calls; returned mutable V is shared among
-// flight waiters. Errors are protected; panic values are discarded as ErrLoaderPanic.
+// cache-owned context, never a waiter's cancellation or deadline; values are
+// visible only with LoadPolicy.InheritValues. Honor its cancellation, which
+// includes LoadPolicy.Timeout, and bound external calls; returned mutable V is
+// shared among flight waiters. Errors are protected; panic values are
+// discarded as ErrLoaderPanic.
 type Loader[K, V any] func(context.Context, K) (LoadResult[V], error)
 
 // JitterSource chooses how much time to subtract from a loaded value's TTL.
@@ -77,6 +79,20 @@ type LoadPolicy struct {
 	StaleIfError bool
 	// RefreshJitter is the maximum loaded-value TTL subtraction; it must be below TTL.
 	RefreshJitter time.Duration
+	// Timeout bounds each loader call from the moment it acquires a loader
+	// slot; zero adds no bound and negative values are rejected. A loader
+	// error after expiry matches ErrLoader and ErrLoadTimeout. Loaders that
+	// ignore cancellation are not abandoned, and a late success is published.
+	Timeout time.Duration
+	// InheritValues exposes the context values, never the cancellation or
+	// deadline, of the caller that admitted the flight to its loader. Joiners'
+	// values are not visible. A stale-while-revalidate refresh inherits from
+	// the stale reader that started it. The admitting context is retained
+	// until the flight finishes. Use inherited values only for diagnostics
+	// such as correlation and tracing: the result is shared by every waiter
+	// and stored for later readers, so anything that changes it, such as a
+	// tenant or principal, belongs in the key.
+	InheritValues bool
 }
 
 // Config contains all dependencies, limits, and policies for a Cache.
@@ -162,7 +178,7 @@ func New[K, V any](config Config[K, V]) (*Cache[K, V], error) {
 	if err := config.TTL.Validate(); err != nil {
 		return nil, err
 	}
-	if config.Load.NegativeTTL < 0 || config.Load.MaxConcurrent < 0 || config.Load.MaxConcurrent > MaxLoadFlights || config.Load.MaxFlights < 0 || config.Load.MaxFlights > MaxLoadFlights || config.Load.MaxWaitersPerKey < 0 || config.Load.RefreshJitter < 0 {
+	if config.Load.NegativeTTL < 0 || config.Load.MaxConcurrent < 0 || config.Load.MaxConcurrent > MaxLoadFlights || config.Load.MaxFlights < 0 || config.Load.MaxFlights > MaxLoadFlights || config.Load.MaxWaitersPerKey < 0 || config.Load.RefreshJitter < 0 || config.Load.Timeout < 0 {
 		return nil, NewError(PolicyError, OperationLoad, ErrInvalidPolicy)
 	}
 	if config.Load.StaleWhileRevalidate && config.Load.StaleIfError {
@@ -305,7 +321,9 @@ func (c *Cache[K, V]) Get(ctx context.Context, logical K) (result Result[V], err
 // Stale-while-revalidate returns admission errors with stale data; later refresh
 // errors are observed. Stale-if-error returns the original stale data plus error.
 // Recursive calls with the supplied loader context reject the same Cache even
-// for a different key; discarding that context bypasses detection.
+// for a different key; discarding that context bypasses detection. With
+// InheritValues the admitting caller's values reach the loader; ctx's
+// cancellation and deadline never do.
 func (c *Cache[K, V]) GetOrLoad(ctx context.Context, logical K, loader Loader[K, V]) (Result[V], error) {
 	active, ok := ctx.Value(loadContextKey{}).(activeLoadContext)
 	switch ok {
@@ -344,7 +362,7 @@ func (c *Cache[K, V]) GetOrLoad(ctx context.Context, logical K, loader Loader[K,
 	case Stale:
 		switch c.load.StaleWhileRevalidate {
 		case true:
-			if err := c.startBackgroundLoad(key, logical, loader); err != nil {
+			if err := c.startBackgroundLoad(ctx, key, logical, loader); err != nil {
 				return result, err
 			}
 			return result, nil
@@ -366,7 +384,7 @@ func (c *Cache[K, V]) GetOrLoad(ctx context.Context, logical K, loader Loader[K,
 		}
 		flight.waiters++
 	} else {
-		flight, err = c.admitFlightLocked(key, logical, loader, 1)
+		flight, err = c.admitFlightLocked(ctx, key, logical, loader, 1)
 		if err != nil {
 			c.loadMu.Unlock()
 			return Result[V]{}, err
@@ -387,7 +405,7 @@ func (c *Cache[K, V]) GetOrLoad(ctx context.Context, logical K, loader Loader[K,
 	}
 }
 
-func (c *Cache[K, V]) startBackgroundLoad(key string, logical K, loader Loader[K, V]) error {
+func (c *Cache[K, V]) startBackgroundLoad(caller context.Context, key string, logical K, loader Loader[K, V]) error {
 	c.loadMu.Lock()
 	defer c.loadMu.Unlock()
 	if c.closed {
@@ -396,25 +414,36 @@ func (c *Cache[K, V]) startBackgroundLoad(key string, logical K, loader Loader[K
 	if _, found := c.flights[key]; found {
 		return nil
 	}
-	_, err := c.admitFlightLocked(key, logical, loader, 0)
+	_, err := c.admitFlightLocked(caller, key, logical, loader, 0)
 	return err
 }
 
 // Admission precedes allocation and spawning; loader slots alone do not bound
 // distinct-key work waiting to enter the loader. Mutation-reserved completed
 // flights remain in the map and must continue consuming this budget.
-func (c *Cache[K, V]) admitFlightLocked(key string, logical K, loader Loader[K, V], waiters int) (*loadFlight[V], error) {
+func (c *Cache[K, V]) admitFlightLocked(
+	caller context.Context,
+	key string,
+	logical K,
+	loader Loader[K, V],
+	waiters int,
+) (*loadFlight[V], error) {
 	if len(c.flights) >= c.load.MaxFlights || c.activeLoads >= c.load.MaxFlights {
 		return nil, ErrFlightLimit
 	}
 	flight := &loadFlight[V]{done: make(chan struct{}), waiters: waiters}
 	c.flights[key] = flight
 	c.activeLoads++
-	go c.runLoad(key, logical, loader, flight)
+	var values context.Context
+	if c.load.InheritValues {
+		values = context.WithoutCancel(caller)
+	}
+	go c.runLoad(values, key, logical, loader, flight)
 	return flight, nil
 }
 
-func (c *Cache[K, V]) runLoad(key string, logical K, loader Loader[K, V], flight *loadFlight[V]) {
+// values is nil unless InheritValues is set; it never carries cancellation.
+func (c *Cache[K, V]) runLoad(values context.Context, key string, logical K, loader Loader[K, V], flight *loadFlight[V]) {
 	var loadStarted time.Time
 	loadOutcome := OutcomeSuccess
 	didLoad := false
@@ -468,8 +497,7 @@ func (c *Cache[K, V]) runLoad(key string, logical K, loader Loader[K, V], flight
 
 	didLoad = true
 	loadStarted = c.clock.Now()
-	loaderCtx := context.WithValue(c.loadCtx, loadContextKey{}, activeLoadContext{owner: c})
-	loaded, err := callLoader(loaderCtx, logical, loader)
+	loaded, err := c.callBoundedLoader(values, logical, loader)
 	if err != nil {
 		flight.err = err
 		return
@@ -518,6 +546,45 @@ func (c *Cache[K, V]) runLoad(key string, logical K, loader Loader[K, V], flight
 		return
 	}
 	flight.result = Result[V]{State: Hit, Value: loaded.Value}
+}
+
+// callBoundedLoader derives the loader context from the cache-owned load
+// context, so Shutdown and Timeout cancel it while caller values are only
+// looked up. The recursion marker is added last so an inherited marker from
+// another cache cannot hide this one.
+func (c *Cache[K, V]) callBoundedLoader(values context.Context, logical K, loader Loader[K, V]) (LoadResult[V], error) {
+	base := c.loadCtx
+	if values != nil {
+		base = inheritedValues{Context: base, values: values}
+	}
+	if c.load.Timeout > 0 {
+		var cancel context.CancelFunc
+		base, cancel = context.WithTimeoutCause(base, c.load.Timeout, ErrLoadTimeout)
+		defer cancel()
+	}
+	loaderCtx := context.WithValue(base, loadContextKey{}, activeLoadContext{owner: c})
+	loaded, err := callLoader(loaderCtx, logical, loader)
+	// Cause records only the first cancellation, so a Shutdown that preceded
+	// the timeout is never reported as one. The original loader error stays
+	// recognizable beside the timeout.
+	if err != nil && errors.Is(context.Cause(loaderCtx), ErrLoadTimeout) {
+		return LoadResult[V]{}, NewError(LoaderError, OperationLoad, errors.Join(ErrLoadTimeout, err))
+	}
+	return loaded, err
+}
+
+// inheritedValues keeps cache-owned cancellation and deadlines while resolving
+// values missing from the load context through the admitting caller.
+type inheritedValues struct {
+	context.Context
+	values context.Context
+}
+
+func (ctx inheritedValues) Value(key any) any {
+	if value := ctx.Context.Value(key); value != nil {
+		return value
+	}
+	return ctx.values.Value(key)
 }
 
 func callLoader[K, V any](ctx context.Context, logical K, loader Loader[K, V]) (
