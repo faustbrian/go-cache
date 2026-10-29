@@ -5,6 +5,8 @@ Versioning and keeps an Unreleased section at the top.
 
 ## [Unreleased]
 
+## [4.2.0] - 2026-10-29
+
 ### Added
 
 - Add opt-in `LoadPolicy.InheritValues` and `LoadPolicy.Timeout`.
@@ -273,7 +275,8 @@ Versioning and keeps an Unreleased section at the top.
 - Keep backend conformance failure messages compatible with standard Go error
   style so strict static analysis remains clean for downstream test suites.
 
-[Unreleased]: https://github.com/faustbrian/go-cache/compare/v4.1.0...HEAD
+[Unreleased]: https://github.com/faustbrian/go-cache/compare/v4.2.0...HEAD
+[4.2.0]: https://github.com/faustbrian/go-cache/compare/v4.1.0...v4.2.0
 [4.1.0]: https://github.com/faustbrian/go-cache/compare/v4.0.0...v4.1.0
 [4.0.0]: https://github.com/faustbrian/go-cache/compare/v3.0.0...v4.0.0
 [3.0.0]: https://github.com/faustbrian/go-cache/compare/v2.0.0...v3.0.0
