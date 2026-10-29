@@ -124,6 +124,8 @@ Valkey deployment.
 
 - Use plain cache-aside for data where a source lookup is affordable.
 - Add a short `NegativeTTL` only when source-level absence is authoritative.
+- Return `LoadResult.Expiry` or call `SetWithExpiry` when the source fixes an
+  entry's deadline; the zero `Expiry` keeps the configured TTL.
 - Use `StaleWhileRevalidate` when low latency is more important than returning
   the refresh error.
 - Use `StaleIfError` when callers must see refresh failures but may also use the

@@ -5,6 +5,7 @@ package cachevalkey_test
 import (
 	"context"
 	"errors"
+	"math"
 	"os"
 	"strings"
 	"testing"
@@ -118,6 +119,23 @@ func runAdapterEdgeCases(
 		}
 		if _, err := backend.Set(ctx, "edge:oversized-write", oversized, cache.Unconditional); !errors.Is(err, cache.ErrValueTooLarge) {
 			t.Fatalf("oversized write returned %v", err)
+		}
+	})
+	t.Run("never deadline round-trips with a long server TTL", func(t *testing.T) {
+		// cache.NeverExpire stores the latest portable deadline.
+		never := time.Unix(0, math.MaxInt64)
+		record := cache.Record{Payload: []byte("value"), ExpiresAt: never, StaleAt: never}
+		if written, err := backend.Set(ctx, "edge:never", record, cache.Unconditional); err != nil || !written {
+			t.Fatalf("set never record: written=%t err=%v", written, err)
+		}
+		ttlMillis, err := client.Do(ctx, client.B().Pttl().Key("edge:never").Build()).ToInt64()
+		ttl := time.Duration(ttlMillis) * time.Millisecond
+		if err != nil || ttl < 200*365*24*time.Hour {
+			t.Fatalf("server TTL=%v err=%v, want about two centuries", ttl, err)
+		}
+		stored, found, err := backend.Get(ctx, "edge:never")
+		if err != nil || !found || !stored.ExpiresAt.Equal(never) || !stored.StaleAt.Equal(never) {
+			t.Fatalf("never record = %+v found=%t err=%v", stored, found, err)
 		}
 	})
 	t.Run("server removes record at stale deadline", func(t *testing.T) {

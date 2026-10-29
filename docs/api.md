@@ -37,6 +37,8 @@ absence marker.
 ## Mutations
 
 - `Set` writes unconditionally.
+- `SetWithExpiry` writes unconditionally with a per-entry `Expiry`; see
+  [per-entry expiry](#per-entry-expiry).
 - `SetIfOwned` atomically writes only while an `OwnershipGuard` matches an
   active owner in an `OwnershipBackend`.
 - `SetNegativeIfOwned` atomically writes an explicit negative record under the
@@ -87,6 +89,38 @@ Successful same-instance mutations supersede an active load for that key, so a
 load cannot overwrite a `Set` or resurrect a `Delete`. Loaders must use their
 supplied context; recursive same-cache calls with that context return
 `ErrRecursiveLoad`. These guarantees are process-local.
+
+## Per-entry expiry
+
+`Expiry` lets one entry carry its own freshness deadline. The zero value keeps
+the cache policy, so fixed-TTL caches behave exactly as before. Loaders return
+it in `LoadResult.Expiry`, and `SetWithExpiry` accepts it directly.
+
+| Expiry | Positive entry | Negative entry |
+| --- | --- | --- |
+| zero | `TTL` minus any `RefreshJitter`, then `StaleFor` | stored only when `NegativeTTL` is positive |
+| `ExpireAt(t)` | fresh before `t`, then `StaleFor`; no jitter | ends at `t`, even when `NegativeTTL` is zero |
+| `NeverExpire()` | never stale; `StaleFor` ignored | never expires |
+
+- A non-zero `Expiry` replaces the policy TTL, jitter and `NegativeTTL` for
+  that entry. `StaleFor` still follows an absolute deadline, so
+  `StaleWhileRevalidate` and `StaleIfError` apply after `t`.
+- A deadline at or before the cache clock behaves like an already expired
+  write: the key is deleted and nothing is stored. A loader's waiters still
+  receive the loaded result.
+- A zero or non-portable `ExpireAt` time, or one whose stale window passes the
+  latest portable instant, fails with `ErrInvalidTTL`.
+- A non-zero `Expiry` fails with `ErrInvalidPolicy` when `TTLPolicy.Sliding` is
+  set, because a sliding hit would replace the explicit deadline.
+- `NeverExpire` stores the latest portable deadline. Remote backends receive
+  a server TTL of roughly two centuries, not a persistent key. Memory-backend
+  capacity eviction still applies to these entries.
+- Only loaders and `SetWithExpiry` accept an `Expiry`. `Add`, `Replace`,
+  `SetMany`, `SetIfOwned` and `SetNegativeIfOwned` keep the policy deadlines.
+- The cache compares a deadline with its own clock. A remote adapter that
+  computes the server TTL from a later clock read can still reject a deadline
+  that passes in between with `ErrInvalidTTL`, classified as `ErrBackend`;
+  the previous value then remains until its own deadline.
 
 ## Bulk operations
 

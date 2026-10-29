@@ -23,7 +23,7 @@ operations:
   steps:
   - type: go-test
     packages: ["."]
-    run: '^Test(GetOrLoadCoalescesConcurrentCallersPerLogicalKey|GetOrLoadLeaderCancellationDoesNotCancelFollower|CloseCancelsLoaderWaitingForGlobalSlot|ShutdownUsesCallerDeadline|ShutdownDuringPublicationWaitPreventsLateWrite)$'
+    run: '^Test(GetOrLoadCoalescesConcurrentCallersPerLogicalKey|GetOrLoadLeaderCancellationDoesNotCancelFollower|CloseCancelsLoaderWaitingForGlobalSlot|ShutdownUsesCallerDeadline|ShutdownDuringPublicationWaitPreventsLateWrite|ExpiryRaceWrites|ExpiryRaceSupersede)$'
     race: true
     count: 1
     timeout: 2m
